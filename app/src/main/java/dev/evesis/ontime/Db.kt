@@ -63,6 +63,7 @@ class Db private constructor(ctx: Context) :
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL, message TEXT NOT NULL,
                 audio_uri TEXT, voice_id TEXT NOT NULL DEFAULT '',
+                sound_id TEXT NOT NULL DEFAULT 'coin',
                 repeat_type TEXT NOT NULL,
                 time_of_day INTEGER NOT NULL DEFAULT 0,
                 week_mask INTEGER NOT NULL DEFAULT 0,
