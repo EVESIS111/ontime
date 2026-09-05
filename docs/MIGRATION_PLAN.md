@@ -3,7 +3,7 @@
 - [x] PHASE0 审计(PROJECT_AUDIT.md,真机基线 13ms+slide-ack ✅)
 - [x] PHASE1 CLAUDE.md+docs
 - [x] PHASE2 baseline(tag baseline/v10.3-stable;APK/DB/触发证据已存档)
-- [ ] PHASE3 构建标准化:补 gradle wrapper(./gradlew 可用),仍锁 Gradle 8.5;单独提交单独验证
+- [x] PHASE3 构建标准化:补 gradle wrapper(./gradlew 可用),仍锁 Gradle 8.5;单独提交单独验证
 - [ ] PHASE4 架构外壳:引 Compose/M3/VM/Nav/Repository(官方模板基准),旧核心不动
 - [ ] PHASE5 OnTime Pixel DesignSystem(Kenney CC0 基底+蓝金语言)
 - [ ] PHASE6 Home+Alert 静态样张→真机截图→用户过目(不可跳过)
