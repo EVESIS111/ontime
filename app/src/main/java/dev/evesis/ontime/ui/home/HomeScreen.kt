@@ -1,5 +1,6 @@
 package dev.evesis.ontime.ui.home
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,11 +33,19 @@ import java.util.Locale
 
 /** 首页:提醒列表 + 新增入口(PHASE6 像素版第一稿) */
 @Composable
-fun HomeScreen(viewModel: HomeViewModel) {
+fun HomeScreen(
+    viewModel: HomeViewModel,
+    onEdit: (id: Long) -> Unit = {},
+    onAdd: () -> Unit = {},
+    onSettings: () -> Unit = {},
+) {
     val state by viewModel.ui.collectAsStateWithLifecycle()
     HomeShell(
         reminders = state.reminders,
         onToggle = viewModel::setEnabled,
+        onEdit = onEdit,
+        onAdd = onAdd,
+        onSettings = onSettings,
     )
 }
 
@@ -44,7 +53,9 @@ fun HomeScreen(viewModel: HomeViewModel) {
 fun HomeShell(
     reminders: List<Reminder>,
     onToggle: (id: Long, on: Boolean) -> Unit = { _, _ -> },
+    onEdit: (id: Long) -> Unit = {},
     onAdd: () -> Unit = {},
+    onSettings: () -> Unit = {},
 ) {
     Column(
         Modifier
@@ -78,24 +89,31 @@ fun HomeShell(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             items(reminders, key = { it.id }) { r ->
-                ReminderRowPixel(r) { on -> onToggle(r.id, on) }
+                ReminderRowPixel(r, onEdit) { on -> onToggle(r.id, on) }
             }
         }
 
-        PixelButton(
-            onClick = onAdd,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = OnTimeSpacing.lg),
-        ) {
-            Text("+ 新提醒", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+        Row(Modifier.fillMaxWidth().padding(top = OnTimeSpacing.lg), horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.md)) {
+            PixelButton(
+                onClick = onAdd,
+                modifier = Modifier.weight(1f),
+            ) {
+                Text("+ 新提醒", style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            }
+            PixelButton(onClick = onSettings) {
+                Text("⚙", style = MaterialTheme.typography.titleMedium)
+            }
         }
     }
 }
 
 @Composable
-private fun ReminderRowPixel(r: Reminder, onToggle: (Boolean) -> Unit) {
-    PixelPanel(Modifier.fillMaxWidth()) {
+private fun ReminderRowPixel(r: Reminder, onEdit: (Long) -> Unit, onToggle: (Boolean) -> Unit) {
+    PixelPanel(
+        Modifier
+            .fillMaxWidth()
+            .clickable { onEdit(r.id) },
+    ) {
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

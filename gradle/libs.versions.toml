@@ -6,6 +6,7 @@ androidxActivity = "1.13.0"
 androidxComposeBom = "2026.05.01"
 androidxCore = "1.18.0"
 androidxLifecycle = "2.10.0"
+androidxNavigation = "2.9.8"   # 2.10.0 需 compileSdk 37,暂锁 36 兼容版
 junit = "4.13.2"
 kotlin = "2.3.21"
 
@@ -19,6 +20,7 @@ androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-toolin
 androidx-compose-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidxLifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidxLifecycle" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "androidxNavigation" }
 junit = { module = "junit:junit", version.ref = "junit" }
 
 [plugins]

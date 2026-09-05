@@ -58,19 +58,35 @@ object Alarms {
         val show = PendingIntent.getActivity(
             ctx, r.id.toInt(), Intent(ctx, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        am.setAlarmClock(AlarmManager.AlarmClockInfo(next, show), fireIntent(ctx, r.id))
+        // 实测(2026-09-05,HarmonyOS 4.2/Android 12 基座):SCHEDULE_EXACT_ALARM 为 AppOps 型,
+        // 覆盖安装/重置后可能被系统静默撤销,setAlarmClock 直接抛 SecurityException 导致进程崩溃。
+        // 降级链:setAlarmClock(exact) → setExactAndAllowWhileIdle → set(非精确,保可用)。
+        try {
+            am.setAlarmClock(AlarmManager.AlarmClockInfo(next, show), fireIntent(ctx, r.id))
+        } catch (se: SecurityException) {
+            try {
+                am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, fireIntent(ctx, r.id))
+            } catch (se2: SecurityException) {
+                am.setWindow(AlarmManager.RTC_WAKEUP, next, 60_000L, fireIntent(ctx, r.id))
+            }
+        }
         db.setNextFire(r.id, next)
         KeepAliveService.refreshNotification(ctx)
     }
 
     fun scheduleAll(ctx: Context) {
-        Db.get(ctx).list().forEach { scheduleNext(ctx, it) }
+        val list = Db.get(ctx).list()
+        list.forEach { scheduleNext(ctx, it) }
     }
 
     fun snooze(ctx: Context, id: Long, minutes: Int) {
         val am = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + minutes * 60_000L, fireIntent(ctx, id))
+        val at = System.currentTimeMillis() + minutes * 60_000L
+        try {
+            am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, at, fireIntent(ctx, id))
+        } catch (se: SecurityException) {   // exact 权限被撤销时降级,保"稍后"可用
+            am.setWindow(AlarmManager.RTC_WAKEUP, at, 60_000L, fireIntent(ctx, id))
+        }
     }
 
     fun cancel(ctx: Context, id: Long) {
