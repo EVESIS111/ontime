@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <item name="alertTitle" type="id" />
-    <item name="alertMessage" type="id" />
-    <item name="slideTrack" type="id" />
-    <item name="btnSlide" type="id" />
-    <item name="btnSnooze" type="id" />
-</resources>
