@@ -34,5 +34,9 @@ private val OnTimeDarkScheme = darkColorScheme(
 fun OnTimeTheme(content: @Composable () -> Unit) {
     // 「准时」为游戏感夜空视觉,固定深色;亮色跟随无意义,保留 isSystemInDarkTheme 占位
     isSystemInDarkTheme()
-    MaterialTheme(colorScheme = OnTimeDarkScheme, content = content)
+    MaterialTheme(
+        colorScheme = OnTimeDarkScheme,
+        typography = OnTimeTypography,
+        content = content,
+    )
 }
