@@ -56,6 +56,12 @@ data class OnTimeAdaptiveSpec(
     }
 }
 
+/** 唯一 Composition Mode(§40-42:结构选择;Spec 只管尺寸 token;一个窗口只落一个 mode) */
+enum class OnTimeLayoutMode { SINGLE_PANE, DASHBOARD }
+
+val OnTimeAdaptiveSpec.layoutMode: OnTimeLayoutMode
+    get() = if (isExpanded && isLandscape) OnTimeLayoutMode.DASHBOARD else OnTimeLayoutMode.SINGLE_PANE
+
 val LocalOnTimeAdaptive = staticCompositionLocalOf {
     OnTimeAdaptiveSpec(false, false, true, false, false, 120, 48.dp, 640.dp, 560.dp)
 }

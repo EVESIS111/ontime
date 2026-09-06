@@ -28,6 +28,7 @@ data class EditorUiState(
     val enabled: Boolean = true,
     val availableVoices: List<String> = emptyList(),
     val finished: Boolean = false,                 // save/delete 完成后置位,UI 弹回
+    val loadedId: Long = Long.MIN_VALUE,           // 幂等守卫:旋转重组不重载(§67 连续性)
 )
 
 class EditorViewModel(private val repo: ReminderRepository) : ViewModel() {
@@ -36,11 +37,13 @@ class EditorViewModel(private val repo: ReminderRepository) : ViewModel() {
     val ui: StateFlow<EditorUiState> = _ui.asStateFlow()
 
     fun load(id: Long, ctx: Context) {
+        if (_ui.value.loadedId == id) return       // 旋转/重组不覆盖未保存编辑
         val voices = listOf("") + (VoicePacks.dir(ctx).listFiles()?.map { it.name } ?: emptyList())
         val r = if (id > 0) repo.find(id) else null
         _ui.value = if (r == null) EditorUiState(
             availableVoices = voices,
             atMillis = System.currentTimeMillis() + 60 * 60_000L,
+            loadedId = id,
         ) else EditorUiState(
             id = r.id, title = r.title, message = r.message,
             repeatType = r.repeatType, timeOfDay = r.timeOfDay, weekMask = r.weekMask,
@@ -49,6 +52,7 @@ class EditorViewModel(private val repo: ReminderRepository) : ViewModel() {
             voiceId = r.voiceId, soundId = r.soundId, enabled = r.enabled,
             availableVoices = if (voices.contains(r.voiceId) || r.voiceId.isEmpty()) voices
             else voices + r.voiceId,                 // TTS id(如 zh-CN-YunyangNeural)兜底显示
+            loadedId = id,
         )
     }
 

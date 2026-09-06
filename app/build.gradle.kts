@@ -12,8 +12,8 @@ android {
         applicationId = "dev.evesis.ontime"
         minSdk = 29
         targetSdk = 33
-        versionCode = 5
-        versionName = "11.1"
+        versionCode = 6
+        versionName = "11.4"
     }
 
     buildTypes {
@@ -31,6 +31,10 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    defaultConfig {
+        buildConfigField("String", "GIT_SHA", "\"${runGitSha()}\"")
     }
     ksp {
         arg("room.schemaLocation", "$projectDir/schemas")
@@ -63,3 +67,9 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     testImplementation(libs.junit)
 }
+
+
+fun runGitSha(): String =
+    providers.exec {
+        commandLine("git", "rev-parse", "--short", "HEAD")
+    }.standardOutput.asText.get().trim()

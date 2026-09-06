@@ -50,6 +50,7 @@ fun SettingsScreen(onBack: () -> Unit, onCatalog: () -> Unit = {}) {
         try { context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "?" }
         catch (e: Exception) { "?" }
     }
+    val gitSha = remember { dev.evesis.ontime.BuildConfig.GIT_SHA }
 
     Column(
         Modifier

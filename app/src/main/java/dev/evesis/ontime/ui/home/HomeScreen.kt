@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import dev.evesis.ontime.ui.theme.LocalOnTimeAdaptive
+import dev.evesis.ontime.ui.theme.OnTimeLayoutMode
+import dev.evesis.ontime.ui.theme.layoutMode
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -199,15 +201,17 @@ fun HomeShell(
                 )
             }
 
-            // ③ 单栏:列表在主列内继续;双栏:列表在右列
-            ScheduleListSection(
-                reminders = reminders,
-                onEdit = onEdit,
-                onToggle = onToggle,
-                topGap = if (spec.twoPane) 0.dp else OnTimeSpacing.sectionGap,
-            )
+            // ③ 互斥布局(when 单一 mode §40):单栏=列表在主列;横屏仪表盘=列表只在右栏
+            if (spec.layoutMode == OnTimeLayoutMode.SINGLE_PANE) {
+                ScheduleListSection(
+                    reminders = reminders,
+                    onEdit = onEdit,
+                    onToggle = onToggle,
+                    topGap = OnTimeSpacing.sectionGap,
+                )
+            }
         }
-        if (spec.twoPane) {
+        if (spec.layoutMode == OnTimeLayoutMode.DASHBOARD) {
             Column(
                 Modifier
                     .weight(1f)
