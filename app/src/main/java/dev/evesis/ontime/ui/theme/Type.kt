@@ -31,10 +31,28 @@ private val pixelLineHeightStyle = LineHeightStyle(
 )
 
 // ── Pixel 角色(身份层)──────────────────────────────────────────
-/** 首页/Alert 的 Hero 时间数字(如 13:07),页面唯一最大元素 */
+/** 首页 Hero 时钟(120sp 巨物,页面约 1/3;纠偏轮:视觉支配级) */
 val OnTimeHeroTime = TextStyle(
     fontFamily = OnTimePixelFont, fontWeight = FontWeight.Normal,
-    fontSize = 80.sp, lineHeight = 100.sp, letterSpacing = 2.sp,   // 数字放宽字距更从容
+    fontSize = 120.sp, lineHeight = 140.sp, letterSpacing = 4.sp,
+    lineHeightStyle = pixelLineHeightStyle,
+)
+/** Spotlight 大字(下一发标题/倒计时/提醒名;40sp) */
+val OnTimeSpotlightTitle = TextStyle(
+    fontFamily = OnTimePixelFont, fontWeight = FontWeight.Normal,
+    fontSize = 40.sp, lineHeight = 52.sp, letterSpacing = 2.sp,
+    lineHeightStyle = pixelLineHeightStyle,
+)
+/** 调度行左侧时刻(time-first 主导数字) */
+val OnTimeRowTime = TextStyle(
+    fontFamily = OnTimePixelFont, fontWeight = FontWeight.Normal,
+    fontSize = 40.sp, lineHeight = 48.sp, letterSpacing = 1.sp,
+    lineHeightStyle = pixelLineHeightStyle,
+)
+/** 提醒行标题(与 40sp 时刻形成主次落差) */
+val OnTimeReminderTitle = TextStyle(
+    fontFamily = OnTimePixelFont, fontWeight = FontWeight.Normal,
+    fontSize = 20.sp, lineHeight = 30.sp, letterSpacing = 2.sp,
     lineHeightStyle = pixelLineHeightStyle,
 )
 /** 屏级大标题(「准时」、Alert 的提醒名) */

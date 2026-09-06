@@ -81,9 +81,20 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = OnTimeSpacing.xl)) {
 
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                QuietButton(onClick = onDone, text = "← 取消")
+                if (state.id > 0) {
+                    QuietButton(onClick = viewModel::delete, text = "删除")
+                }
+            }
             Text(
                 if (state.id == 0L) "新提醒" else "编辑提醒",
                 style = OnTimeScreenTitle, color = OnTimeColors.InkWhite,
+                modifier = Modifier.padding(top = OnTimeSpacing.md),
             )
 
             // ── 内容 ─────────────────────────────
@@ -181,20 +192,10 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
             SectionHeader("行为")
             NumberField("稍后提醒(分钟)", state.snoozeMinutes) { v -> viewModel.update { it.copy(snoozeMinutes = v.coerceIn(1, 60)) } }
 
-            // ── 操作 ─────────────────────────────
+            // ── 保存(唯一通栏主操作;取消/删除已在顶部)─────────────
             Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
-            Row(horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.md)) {
-                QuietButton(onClick = onDone, text = "取消", modifier = Modifier.weight(1f))
-                PixelButton(onClick = viewModel::save, modifier = Modifier.weight(2f)) {
-                    Text("保存", style = OnTimeButtonLabel)
-                }
-            }
-            if (state.id > 0) {
-                QuietButton(
-                    onClick = viewModel::delete,
-                    text = "删除此提醒",
-                    modifier = Modifier.padding(top = OnTimeSpacing.md),
-                )
+            PixelButton(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
+                Text("保存", style = OnTimeButtonLabel)
             }
             Spacer(Modifier.padding(top = OnTimeSpacing.xxl))
         }

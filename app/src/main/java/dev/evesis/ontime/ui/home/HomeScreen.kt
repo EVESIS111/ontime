@@ -1,6 +1,7 @@
 package dev.evesis.ontime.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -10,11 +11,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Switch
-import androidx.compose.material3.Text
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -23,35 +25,35 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.evesis.ontime.Reminder
 import dev.evesis.ontime.ScheduleEngine
 import dev.evesis.ontime.data.AlarmHealth
 import dev.evesis.ontime.data.AlarmHealthProbe
-import dev.evesis.ontime.ui.components.QuietButton
-import dev.evesis.ontime.ui.components.PixelButton
-import dev.evesis.ontime.ui.components.QuietSurface
-import dev.evesis.ontime.ui.components.SectionHeader
 import dev.evesis.ontime.ui.theme.OnTimeButtonLabel
 import dev.evesis.ontime.ui.theme.OnTimeColors
 import dev.evesis.ontime.ui.theme.OnTimeHeroTime
-import dev.evesis.ontime.ui.theme.OnTimeLayout
 import dev.evesis.ontime.ui.theme.OnTimeMetadata
+import dev.evesis.ontime.ui.theme.OnTimeReminderTitle
+import dev.evesis.ontime.ui.theme.OnTimeRowTime
 import dev.evesis.ontime.ui.theme.OnTimeSecondary
-import dev.evesis.ontime.ui.theme.OnTimeSectionTitle
+import dev.evesis.ontime.ui.theme.OnTimeSizing
 import dev.evesis.ontime.ui.theme.OnTimeSpacing
+import dev.evesis.ontime.ui.theme.OnTimeSpotlightTitle
 import dev.evesis.ontime.ui.theme.OnTimeTheme
 import kotlinx.coroutines.delay
 import java.text.SimpleDateFormat
-import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
 /*
- * Home v2(Visual Redesign;参考:Klokk 时间主体 · Clock(yassineAbou) 信息层级 · Tomato 留白)
- * 层级:①当前时间(Hero,唯一最大元素)②下一发提醒 ③提醒列表(静默面无框)④操作。
+ * Home v3 — Structural Redesign(2026-09-06 纠偏轮)
+ * 母版:Klokk(Hero 时间巨物+负空间)· material-clock(time-first 行,MIT/README 自证)
+ * 结构:①120sp Hero 时钟 ②Next Spotlight 横幅(全屏唯一金框)③time-first 调度列表
+ *      ④右下角浮动新增 + 左下角设置(取消底部通栏按钮条)。
  */
 
 @Composable
@@ -74,7 +76,6 @@ fun HomeScreen(
     )
 }
 
-/** 每分钟步进的时钟(Klokk 启发:时间是页面唯一主角) */
 @Composable
 private fun rememberMinuteTick(): Long {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -88,6 +89,14 @@ private fun rememberMinuteTick(): Long {
     return now
 }
 
+/** 行左侧的"下一次时刻"(INTERVAL 无单点时刻时显示间隔) */
+private fun Reminder.rowTimeLabel(): String = when {
+    enabled && nextFireAt > 0 ->
+        SimpleDateFormat("HH:mm", Locale.CHINA).format(Date(nextFireAt))
+    repeatType == ScheduleEngine.RepeatType.INTERVAL -> "${intervalMinutes}′"
+    else -> "·"
+}
+
 @Composable
 fun HomeShell(
     reminders: List<Reminder>,
@@ -99,48 +108,74 @@ fun HomeShell(
     onFixHealth: () -> Unit = {},
 ) {
     val now = rememberMinuteTick()
+    val active = reminders.filter { it.enabled && it.nextFireAt > 0 }
+    val next = active.minByOrNull { it.nextFireAt }
 
-    Column(
+    Box(
         Modifier
             .fillMaxSize()
             .background(OnTimeColors.DeepBlue)
-            .padding(
-                top = OnTimeSpacing.heroTop,
-                bottom = OnTimeSpacing.gutter,
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Column(
             Modifier
-                .fillMaxWidth()
-                .widthInMax(),
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxSize()
+                .padding(horizontal = OnTimeSpacing.gutterExpanded),
         ) {
-            // ① Hero 时间
-            Text(
-                SimpleDateFormat("HH:mm", Locale.CHINA).format(Date(now)),
-                style = OnTimeHeroTime,
-                color = OnTimeColors.InkWhite,
-            )
-            Text(
-                SimpleDateFormat("M月d日 EEEE", Locale.CHINA).format(Date(now)),
-                style = OnTimeSecondary,
-                color = OnTimeColors.InkMuted,
-                modifier = Modifier.padding(top = OnTimeSpacing.xs),
-            )
-
-            // ② 下一发(无计划时安静收起)
-            val active = reminders.filter { it.enabled && it.nextFireAt > 0 }
-            active.minByOrNull { it.nextFireAt }?.let { next ->
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = OnTimeSpacing.heroTop),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // ① Hero 时钟(唯一居中元素;页面视觉支配)
                 Text(
-                    "下一发 「${next.title}」 · ${humanize(next.nextFireAt - now)}后",
-                    style = OnTimeMetadata,
-                    color = OnTimeColors.Gold,
-                    modifier = Modifier.padding(top = OnTimeSpacing.lg),
+                    SimpleDateFormat("HH:mm", Locale.CHINA).format(Date(now)),
+                    style = OnTimeHeroTime,          // 120sp 巨物
+                    color = OnTimeColors.InkWhite,
+                )
+                Text(
+                    SimpleDateFormat("M月d日 EEEE", Locale.CHINA).format(Date(now)),
+                    style = OnTimeSecondary,
+                    color = OnTimeColors.InkMuted,
+                    modifier = Modifier.padding(top = OnTimeSpacing.sm),
                 )
             }
 
-            // 健康警示(克制;点击修复)
+            // ② Next Spotlight(第二主体;左对齐横幅,全屏唯一 2dp 金框)
+            next?.let { n ->
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = OnTimeSpacing.xxl)
+                        .background(OnTimeColors.DeepBlueHigh.copy(alpha = 0.72f))
+                        .border(OnTimeSizing.borderFocused, OnTimeColors.Gold)
+                        .clickable { onEdit(n.id) }
+                        .padding(horizontal = OnTimeSpacing.lg, vertical = OnTimeSpacing.md),
+                ) {
+                    Text("下一发", style = OnTimeMetadata, color = OnTimeColors.Gold)
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        modifier = Modifier.padding(top = OnTimeSpacing.xs),
+                    ) {
+                        Text(n.title, style = OnTimeSpotlightTitle, color = OnTimeColors.Gold)
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            "${humanize(n.nextFireAt - now)}后",
+                            style = OnTimeSpotlightTitle,
+                            color = OnTimeColors.InkWhite,
+                            textAlign = TextAlign.End,
+                        )
+                    }
+                    Text(
+                        n.desc(),
+                        style = OnTimeSecondary,
+                        color = OnTimeColors.InkMuted,
+                        modifier = Modifier.padding(top = OnTimeSpacing.xxs),
+                    )
+                }
+            }
+
+            // 健康警示(极克制一行)
             if (alarmHealth != AlarmHealth.HEALTHY) {
                 Text(
                     if (alarmHealth == AlarmHealth.DEGRADED) "⚠ 提醒可能无法准时触发 · 点击修复"
@@ -148,111 +183,95 @@ fun HomeShell(
                     style = OnTimeSecondary,
                     color = OnTimeColors.Gold,
                     modifier = Modifier
-                        .padding(top = OnTimeSpacing.sm)
+                        .padding(top = OnTimeSpacing.md)
                         .clickable(onClick = onFixHealth),
                 )
             }
 
-            // ③ 列表
-            Column(Modifier.padding(top = OnTimeSpacing.sectionGap)) {
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = OnTimeSpacing.xl),
-                ) {
-                    SectionHeader("我的提醒")
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(OnTimeSpacing.lg)) {
-                        items(reminders, key = { it.id }) { r ->
-                            ReminderRowV2(r, onEdit) { on -> onToggle(r.id, on) }
-                        }
-                    }
-                    if (reminders.isEmpty()) {
-                        Text(
-                            "还没有提醒。点下面的按钮,建第一条。",
-                            style = OnTimeSecondary,
-                            color = OnTimeColors.InkMuted,
-                            modifier = Modifier.padding(top = OnTimeSpacing.lg),
-                        )
-                    }
+            // ③ time-first 调度列表(大时间主导行;左对齐扫描)
+            Text(
+                "提醒",
+                style = OnTimeMetadata,
+                color = OnTimeColors.Gold.copy(alpha = 0.8f),
+                modifier = Modifier.padding(
+                    top = if (next != null) OnTimeSpacing.sectionGap else OnTimeSpacing.xxl,
+                    bottom = OnTimeSpacing.md,
+                ),
+            )
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(OnTimeSpacing.xxs)) {
+                items(reminders, key = { it.id }) { r ->
+                    ScheduleRow(r, onEdit) { on -> onToggle(r.id, on) }
                 }
             }
+        }
 
-            // ④ 操作(底部,主按钮限宽)
-            Spacer(Modifier.weight(1f))
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = OnTimeSpacing.xl),
-                horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.md),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                PixelButton(
-                    onClick = onAdd,
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Text("+ 新提醒", style = OnTimeButtonLabel)
-                }
-                QuietButton(onClick = onSettings, text = "⚙ 设置", emphasize = false)
-            }
+        // ④ 浮动新增(右下角像素金块)
+        Box(
+            Modifier
+                .align(Alignment.BottomEnd)
+                .padding(OnTimeSpacing.xl)
+                .size(OnTimeSizing.fabSize)
+                .background(OnTimeColors.Gold)
+                .clickable(onClick = onAdd),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("+", style = OnTimeButtonLabel, color = OnTimeColors.DeepBlue)
+        }
+        // 设置入口(左下角,静默)
+        Box(
+            Modifier
+                .align(Alignment.BottomStart)
+                .padding(OnTimeSpacing.xl)
+                .size(OnTimeSizing.fabSize)
+                .background(OnTimeColors.InkWhite.copy(alpha = 0.07f))
+                .clickable(onClick = onSettings),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text("⚙", style = OnTimeButtonLabel, color = OnTimeColors.InkMuted)
         }
     }
 }
 
-private fun Modifier.widthInMax(): Modifier = this.then(
-    Modifier.padding(horizontal = OnTimeSpacing.gutter)
-)
-
-/** 提醒行 v2:无框静默面;信息三级(名称→规则/下次→开关);声音等细节留在编辑页(§25) */
+/** time-first 行:左侧 40sp 像素时刻(视觉主体),右标题,开关末端 */
 @Composable
-private fun ReminderRowV2(r: Reminder, onEdit: (Long) -> Unit, onToggle: (Boolean) -> Unit) {
-    QuietSurface(
+private fun ScheduleRow(r: Reminder, onEdit: (Long) -> Unit, onToggle: (Boolean) -> Unit) {
+    Row(
         Modifier
             .fillMaxWidth()
-            .clickable { onEdit(r.id) },
+            .clickable { onEdit(r.id) }
+            .padding(vertical = OnTimeSpacing.md),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    r.title,
-                    style = OnTimeSectionTitle,
-                    color = if (r.enabled) OnTimeColors.InkWhite else OnTimeColors.InkMuted,
-                )
-                Text(
-                    buildString {
-                        append(r.desc())
-                        if (r.enabled && r.nextFireAt > 0) {
-                            append(" · ")
-                            append(SimpleDateFormat("MM-dd HH:mm", Locale.CHINA).format(Date(r.nextFireAt)))
-                        }
-                    },
-                    style = OnTimeMetadata,
-                    color = OnTimeColors.InkMuted,
-                    modifier = Modifier.padding(top = OnTimeSpacing.xs),
-                )
-            }
-            Switch(
-                checked = r.enabled,
-                onCheckedChange = onToggle,
-                modifier = Modifier.padding(start = OnTimeSpacing.md),
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = OnTimeColors.Gold,
-                    checkedThumbColor = OnTimeColors.DeepBlue,
-                    uncheckedTrackColor = OnTimeColors.InkWhite.copy(alpha = 0.12f),
-                    uncheckedThumbColor = OnTimeColors.InkMuted,
-                ),
-            )
-        }
+        Text(
+            r.rowTimeLabel(),
+            style = OnTimeRowTime,     // 40sp 像素
+            color = if (r.enabled) OnTimeColors.Gold else OnTimeColors.InkMuted.copy(alpha = 0.4f),
+        )
+        Text(
+            r.title,
+            style = OnTimeReminderTitle,   // 20sp 像素,与 40sp 时间形成主次落差
+            color = if (r.enabled) OnTimeColors.InkWhite else OnTimeColors.InkMuted,
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = OnTimeSpacing.lg),
+        )
+        Switch(
+            checked = r.enabled,
+            onCheckedChange = onToggle,
+            colors = SwitchDefaults.colors(
+                checkedTrackColor = OnTimeColors.Gold,
+                checkedThumbColor = OnTimeColors.DeepBlue,
+                uncheckedTrackColor = OnTimeColors.InkWhite.copy(alpha = 0.12f),
+                uncheckedThumbColor = OnTimeColors.InkMuted,
+            ),
+        )
     }
 }
 
 private fun humanize(ms: Long): String {
     val m = (ms / 60_000L).coerceAtLeast(0)
     return when {
-        m >= 60 -> "${m / 60} 小时 ${m % 60} 分"
+        m >= 60 -> "${m / 60}小时${m % 60}分"
         m >= 1 -> "$m 分钟"
         else -> "不到 1 分钟"
     }
@@ -265,10 +284,10 @@ private fun HomeShellPreview() {
     OnTimeTheme {
         HomeShell(
             reminders = listOf(
-                Reminder(1, "喝水", "该喝水了,起来活动一下,补充水分。", null, "daji", "coin",
+                Reminder(1, "喝水", "该喝水了。", null, "daji", "coin",
                     ScheduleEngine.RepeatType.INTERVAL, 0, 0, 45, 0, 5, true, 1788700000000, 0, 540, 1290),
-                Reminder(2, "补充水分并起来活动一下", "英语学习时间到了,坚持每天进步一点点,长台词测试行高。", null, "zhaojun", "powerup",
-                    ScheduleEngine.RepeatType.DAILY, 13 * 60, 0, 60, 0, 5, false, 0, 0),
+                Reminder(2, "补充水分并起来活动一下", "英语学习时间到了,坚持每天进步一点点,长台词行高测试。", null, "zhaojun", "powerup",
+                    ScheduleEngine.RepeatType.DAILY, 13 * 60, 0, 60, 0, 5, true, 1788690000000, 0),
             )
         )
     }

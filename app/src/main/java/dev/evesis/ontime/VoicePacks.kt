@@ -9,6 +9,19 @@ import java.security.MessageDigest
 
 object VoicePacks {
 
+    /** 角色显示名(Alert 角色席位/编辑页音色显示;纯函数,shared-ready) */
+    fun displayName(voiceId: String): String = when (voiceId) {
+        "daji" -> "妲己"
+        "zhaojun" -> "王昭君"
+        "xiaoqiao" -> "小乔"
+        "diaochan" -> "貂蝉"
+        "zh-CN-YunyangNeural" -> "云扬"
+        "zh-CN-XiaoxiaoNeural" -> "晓晓"
+        "zh-CN-YunjianNeural" -> "云健"
+        "" -> "准时"
+        else -> voiceId
+    }
+
     private const val TAG = "OnTime"
 
     fun dir(ctx: Context): File = File(ctx.filesDir, "voices")

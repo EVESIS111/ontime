@@ -46,6 +46,7 @@ class AlertActivity : ComponentActivity() {
                 AlertScreen(
                     title = r.title,
                     message = r.pickMessage(),
+                    voiceLabel = if (r.voiceId.isNotEmpty()) "${VoicePacks.displayName(r.voiceId)} 说" else "准时",
                     snoozeLabel = "稍后 ${r.snoozeMinutes} 分钟",
                     onSlideAck = {
                         Db.get(this).updateLogNote(logId, "slide-ack")

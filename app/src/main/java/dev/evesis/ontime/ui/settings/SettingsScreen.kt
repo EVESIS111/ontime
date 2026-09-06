@@ -30,6 +30,7 @@ import dev.evesis.ontime.ui.components.SectionHeader
 import dev.evesis.ontime.ui.theme.OnTimeButtonLabel
 import dev.evesis.ontime.ui.theme.OnTimeBody
 import dev.evesis.ontime.ui.theme.OnTimeCaption
+import dev.evesis.ontime.ui.theme.OnTimeMetadata
 import dev.evesis.ontime.ui.theme.OnTimeColors
 import dev.evesis.ontime.ui.theme.OnTimeScreenTitle
 import dev.evesis.ontime.ui.theme.OnTimeSecondary
@@ -98,6 +99,12 @@ fun SettingsScreen(onBack: () -> Unit) {
                 "准时 v$versionName · 本地提醒,无网络,无账号",
                 style = OnTimeBody,
                 color = OnTimeColors.InkWhite,
+            )
+            Text(
+                "v$versionName · d0da5ea",
+                style = OnTimeMetadata,
+                color = OnTimeColors.InkMuted,
+                modifier = Modifier.padding(top = OnTimeSpacing.md),
             )
             Text(
                 "开源:像素字体 Fusion Pixel(OFL)· 滑动确认基于 Brutus(MIT)· 视觉语言参考 Kenney(CC0)",

@@ -52,6 +52,7 @@ object OnTimeSizing {
     val minTouchTarget = 48.dp
     val buttonHeight = 56.dp
     val swipeThumb = 64.dp
+    val fabSize = 64.dp           // 浮动新增/设置角块
     val hairline = 1.dp        // 细分隔线
     val borderFocused = 2.dp   // 焦点元素像素描边(唯一允许的粗框)
 }
