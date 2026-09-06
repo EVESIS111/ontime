@@ -15,6 +15,8 @@ object OnTimeColors {
     val InkWhite = Color(0xFFEDE6D6)      // 暖白正文(非纯白)
     val InkMuted = Color(0xFF8E9BB3)      // 次要文字:蓝灰
     val VoiceCyan = Color(0xFF7FB4D8)     // 语音/角色信息点缀
+    val Danger = Color(0xFFC05656)        // 破坏性操作(左滑删除按钮;克制暗红,非荧光)
+    val OnDanger = Color(0xFFFFE9E9)      // 红底上的文字
 }
 
 private val OnTimeDarkScheme = darkColorScheme(

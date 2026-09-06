@@ -1,10 +1,18 @@
 package dev.evesis.ontime.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.roundToInt
+import dev.evesis.ontime.ui.components.PixelGlyph
+import dev.evesis.ontime.ui.components.PixelIcon
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -21,6 +29,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,7 +38,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
-import dev.evesis.ontime.ui.components.PixelGlyph
 import dev.evesis.ontime.ui.components.PixelIcon
 import dev.evesis.ontime.ui.components.PixelToggle
 import androidx.compose.runtime.Composable
@@ -343,47 +351,70 @@ private fun ScheduleListSection(
             if (selecting) {
                 SelectRow(r, r.id in selectedIds) { onToggleSelect(r.id) }
             } else {
-                SwipeDeleteRow(r = r, onEdit = onEdit, onToggle = onToggle, onDelete = onDeleteOne, onLongSelect = onLongSelect)
+                SwipeRevealRow(r = r, onEdit = onEdit, onToggle = onToggle, onDelete = onDeleteOne, onLongSelect = onLongSelect)
             }
         }
     }
 }
 
-/** 普通行:左滑删除(官方 SwipeToDismissBox 手势,像素删除底)+ 点击编辑 + 长按进选择 */
+/** 微信式左滑行:滑出红色删除按钮(吸附),点按钮才删除;点行收回/进编辑;长按进选择 */
 @Composable
-private fun SwipeDeleteRow(
+private fun SwipeRevealRow(
     r: Reminder,
     onEdit: (Long) -> Unit,
     onToggle: (id: Long, on: Boolean) -> Unit,
     onDelete: (Long) -> Unit,
     onLongSelect: (Long) -> Unit = {},
 ) {
-    val dismiss = rememberSwipeToDismissBoxState(
-        confirmValueChange = { v ->
-            if (v == SwipeToDismissBoxValue.EndToStart) { onDelete(r.id); true } else false
-        },
-        positionalThreshold = { it * 0.45f },
-    )
-    SwipeToDismissBox(
-        state = dismiss,
-        enableDismissFromStartToEnd = false,
-        backgroundContent = {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(OnTimeColors.Gold.copy(alpha = 0.25f)),
-                contentAlignment = androidx.compose.ui.Alignment.CenterEnd,
-            ) {
-                Text(
-                    "  删除 »",
-                    style = OnTimeButtonLabel,
-                    color = OnTimeColors.Gold,
-                    modifier = Modifier.padding(end = OnTimeSpacing.xl),
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val revealPx = with(density) { 96.dp.toPx() }
+    var offsetX by remember(r.id) { mutableFloatStateOf(0f) }
+    val revealed = offsetX < -revealPx / 2f
+
+    Box(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+        // 底层:红色删除按钮(右缘 96dp;点击=删除)
+        Box(
+            Modifier
+                .align(Alignment.CenterEnd)
+                .width(96.dp)
+                .fillMaxHeight()
+                .background(OnTimeColors.Danger)
+                .clickable { onDelete(r.id) },
+            contentAlignment = Alignment.Center,
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                PixelIcon(
+                    glyph = PixelGlyph.CLOSE,
+                    sizeDp = 18, color = OnTimeColors.OnDanger,
                 )
+                Text("删除", style = OnTimeButtonLabel, color = OnTimeColors.OnDanger,
+                    modifier = Modifier.padding(top = OnTimeSpacing.xxs))
             }
-        },
-    ) {
-        ScheduleRow(r, onEdit, onToggle = { on -> onToggle(r.id, on) }, onLongClick = { onLongSelect(r.id) })
+        }
+        // 前层:行内容(跟手位移;松手吸附 按钮位/收回;点击行为随状态)
+        Box(
+            Modifier
+                .offset { IntOffset(offsetX.roundToInt(), 0) }
+                .pointerInput(revealPx) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            offsetX = if (offsetX < -revealPx / 2f) -revealPx else 0f
+                        },
+                        onDragCancel = { offsetX = if (offsetX < -revealPx / 2f) -revealPx else 0f },
+                        onHorizontalDrag = { change, amt ->
+                            change.consume()
+                            offsetX = (offsetX + amt).coerceIn(-revealPx, 0f)
+                        },
+                    )
+                },
+        ) {
+            ScheduleRow(
+                r = r,
+                onEdit = { if (revealed) { offsetX = 0f } else onEdit(r.id) },   // 露出时点击=收回
+                onToggle = { on -> onToggle(r.id, on) },
+                onLongClick = { onLongSelect(r.id) },
+            )
+        }
     }
 }
 
