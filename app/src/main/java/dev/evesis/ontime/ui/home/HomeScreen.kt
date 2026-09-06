@@ -161,7 +161,7 @@ fun HomeShell(
                         .padding(horizontal = OnTimeSpacing.xl),
                 ) {
                     SectionHeader("我的提醒")
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(OnTimeSpacing.md)) {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(OnTimeSpacing.lg)) {
                         items(reminders, key = { it.id }) { r ->
                             ReminderRowV2(r, onEdit) { on -> onToggle(r.id, on) }
                         }

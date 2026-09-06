@@ -39,7 +39,7 @@ fun QuietSurface(
     content: @Composable () -> Unit,
 ) {
     Box(
-        modifier.background(OnTimeColors.InkWhite.copy(alpha = 0.05f)),
+        modifier.background(OnTimeColors.InkWhite.copy(alpha = 0.065f)),
     ) {
         Column(Modifier.padding(OnTimeSpacing.lg)) { content() }
     }

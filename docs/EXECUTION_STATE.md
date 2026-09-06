@@ -1,9 +1,10 @@
 # EXECUTION_STATE.md — 会话中断后由此继续(保持精简,勿写成流水账)
 
-- **Current Phase**: Frontend Visual Redesign — 代码层完成,真机验证被设备离线阻塞
+- **Current Phase**: ✅ **UI Visual Redesign Build 完成**(2026-09-06 14:2x,待用户验收)
 - **Mode**: Autonomous Execution
-- **已完成(本阶段)**:Reference Board 9 项(UI_REFERENCE_BOARD.md;Jenga Token/Carbon 2xGrid/Klokk 时间主体/Tomato 基准/Glock 信息架构已拉源码到 docs/references/)→ **Design System v2**(DESIGN_SYSTEM.md:双字体 Typography/五层 Spacing/框预算/Content Tolerance/Adaptive 宽度)→ 四页重构(Home Hero 时间主视觉+无框行;Editor Section 化;Alert 极简;Settings 眉标分组)→ debug/release 构建通过(57bd70f,release 4.13MB)
-- **硬阻塞**:DBY2-W00 重启后 adb 未回连(USB 需重新插拔/授权)→ 待用户接回后执行:装 release→四页截图(Before 已有 /tmp/pixel-v3.png 等)→2-4 轮视觉迭代→功能回归→60s 真触发→Before/After 对比→验收汇报
-- **上一里程碑**: v11.0 Stable Foundation(9843e9d);tags: baseline/v10.3-stable, v11-initial-acceptance
-- **DB 运维铁律**: run-as 只信 databases/;filesDir 资产走 App 导入;WAL 三件套一起动
-- **v11.0 待补三项**(同设备阻塞): boot 重启验证/v11.0 装机归档/recents 划掉测试
+- **交付物**: release 4.13MB(v11.1 视觉版);归档 /sdcard/OnTime项目/v11/OnTime-v11.1-visual-redesign.apk;截图 docs/screenshots/
+- **本阶段完成**:Reference Board 9 项 → Design System v2(DESIGN_SYSTEM.md)→ 四页重构 → 真机截图迭代 2 轮(行面 6.5%/行距 lg)→ 全功能回归(开关 4→3→4/编辑保存还原/Alert 真触发 6ms+slide-ack)→ Before/After 并排(before-after-home.png)
+- **v11.0 欠账已清**:boot 重启自愈 ✅(设备过夜重启后 4 闹钟+服务自动恢复);过夜真实触发 16ms+pack:daji ✅;装机归档 ✅
+- **待办(recents 划掉测试等低优先)**:见 RELIABILITY_MATRIX.md 待补区
+- **tags**: baseline/v10.3-stable, v11-initial-acceptance;stable HEAD 见 git log
+- **DB 运维铁律**: run-as 只信 databases/;filesDir 资产走 App 导入;WAL 三件套一起动;装 release 后 run-as 失效
