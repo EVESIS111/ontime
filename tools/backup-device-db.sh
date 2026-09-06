@@ -38,10 +38,10 @@ if [ "$(head -c 15 "$OUT")" != "SQLite format 3" ]; then
   echo "FAIL: not a SQLite file"; rm -f "$OUT"; exit 1
 fi
 
-# 5. 附带 journal/wal(存在时)
-for extra in "$DB-journal" "$DB-wal" "$DB-shm"; do
-  if "$ADB" shell "run-as $PKG ls $extra" >/dev/null 2>&1; then
-    "$ADB" shell "run-as $PKG cat $extra" > "$OUT_DIR/$(basename $extra)-$TS" 2>/dev/null || true
+# 5. 附带 WAL/SHM(Room 默认 WAL,未 checkpoint 数据在 -wal;restore 按同名后缀配对推回)
+for suffix in "-wal" "-shm"; do
+  if "$ADB" shell "run-as $PKG ls $DB$suffix" >/dev/null 2>&1; then
+    "$ADB" shell "run-as $PKG cat $DB$suffix" > "$OUT$suffix" 2>/dev/null || true
   fi
 done
 

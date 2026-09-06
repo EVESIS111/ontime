@@ -85,14 +85,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    /** 提醒 App 的通知是生命线;Android 13+ 需运行时请求,否则到点通知全静默 */
+    /** 提醒 App 的通知是生命线;Android 13+ 需运行时请求,否则到点通知全静默。附带语音包导入的音频读取 */
     private fun requestNotificationPermissionIfNeeded() {
-        if (Build.VERSION.SDK_INT >= 33 &&
-            ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
-            != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                this, arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 100)
+        val wanted = mutableListOf<String>()
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+                wanted.add(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+            if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_MEDIA_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+                wanted.add(android.Manifest.permission.READ_MEDIA_AUDIO)
+            }
+        } else if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.READ_EXTERNAL_STORAGE)
+            != PackageManager.PERMISSION_GRANTED) {
+            wanted.add(android.Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+        if (wanted.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, wanted.toTypedArray(), 100)
         }
     }
 }

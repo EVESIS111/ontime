@@ -25,7 +25,14 @@ fi
 
 # stdin 流式推回(run-as 无 /sdcard 读权限,scoped storage)
 "$ADB" shell "run-as $PKG sh -c 'cat > $DB'" < "$SRC"
-"$ADB" shell "run-as $PKG sh -c 'rm -f $DB-journal $DB-wal $DB-shm'"
+# WAL 安全:Room 默认 WAL,未 checkpoint 的数据在 -wal 里;备份若含伴生文件必须一并推回,
+# 绝不能删(删除会丢 WAL 内未落盘数据)。残留 journal 属 truncate 模式旧库,推回的库自带其一致性状态。
+SRC_BASE="$(basename "$SRC")"
+BACKUP_DIR="$(dirname "$SRC")"
+for suffix in "-wal" "-shm"; do
+    EXTRA="$BACKUP_DIR/${SRC_BASE%.db}${suffix}"
+    [ -f "$EXTRA" ] && "$ADB" shell "run-as $PKG sh -c 'cat > $DB${suffix}'" < "$EXTRA" && echo "pushed $DB${suffix}"
+done
 
 # 回读校验
 "$ADB" shell "run-as $PKG cat $DB" > /tmp/restore-verify.db

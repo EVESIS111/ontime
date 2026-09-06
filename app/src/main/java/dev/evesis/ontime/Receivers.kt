@@ -77,8 +77,8 @@ class AlarmReceiver : BroadcastReceiver() {
         Sounds.byId(r.soundId).id + "+" + when {
             !r.audioUri.isNullOrEmpty() -> "music"
             r.voiceId.isEmpty() -> "tts"
-            VoicePacks.lookup(context, r.voiceId, msg) != null -> "pack:${r.voiceId}"
-            else -> "miss:${r.voiceId}"
+            VoicePacks.lookup(context, r.voiceId, msg) != null -> "pack:" + r.voiceId
+            else -> "miss:" + r.voiceId
         }
 }
 
