@@ -1,6 +1,11 @@
 package dev.evesis.ontime.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.ui.unit.dp
@@ -19,6 +24,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
@@ -82,6 +89,13 @@ fun HomeScreen(
         onSettings = onSettings,
         alarmHealth = state.alarmHealth,
         onFixHealth = { AlarmHealthProbe.openSettings(context) },
+        selecting = state.selecting,
+        selectedIds = state.selectedIds,
+        onBeginSelect = viewModel::beginSelect,
+        onToggleSelect = viewModel::toggleSelect,
+        onClearSelection = viewModel::clearSelection,
+        onDeleteSelected = viewModel::deleteSelected,
+        onDeleteOne = viewModel::deleteOne,
     )
 }
 
@@ -115,11 +129,21 @@ fun HomeShell(
     onSettings: () -> Unit = {},
     alarmHealth: AlarmHealth = AlarmHealth.HEALTHY,
     onFixHealth: () -> Unit = {},
+    selecting: Boolean = false,
+    selectedIds: Set<Long> = emptySet(),
+    onBeginSelect: (Long) -> Unit = {},
+    onToggleSelect: (Long) -> Unit = {},
+    onClearSelection: () -> Unit = {},
+    onDeleteSelected: () -> Unit = {},
+    onDeleteOne: (Long) -> Unit = {},
 ) {
     val now = rememberMinuteTick()
     val active = reminders.filter { it.enabled && it.nextFireAt > 0 }
     val next = active.minByOrNull { it.nextFireAt }
     val spec = LocalOnTimeAdaptive.current
+
+    // 选择模式:返回键先退出选择(系统 Back 语义保留)
+    BackHandler(enabled = selecting) { onClearSelection() }
     val heroStyle = OnTimeHeroTime.copy(fontSize = spec.heroTimeSp.sp, lineHeight = (spec.heroTimeSp + 20).sp)
 
     Box(
@@ -208,6 +232,14 @@ fun HomeShell(
                     onEdit = onEdit,
                     onToggle = onToggle,
                     topGap = OnTimeSpacing.sectionGap,
+                    selecting = selecting,
+                    selectedIds = selectedIds,
+                    onBeginSelect = onBeginSelect,
+                    onToggleSelect = onToggleSelect,
+                    onClearSelection = onClearSelection,
+                    onDeleteSelected = onDeleteSelected,
+                    onDeleteOne = { id -> onDeleteOne(id) },
+                    onLongSelect = onBeginSelect,
                 )
             }
         }
@@ -223,6 +255,14 @@ fun HomeShell(
                     onEdit = onEdit,
                     onToggle = onToggle,
                     topGap = OnTimeSpacing.heroTop,
+                    selecting = selecting,
+                    selectedIds = selectedIds,
+                    onBeginSelect = onBeginSelect,
+                    onToggleSelect = onToggleSelect,
+                    onClearSelection = onClearSelection,
+                    onDeleteSelected = onDeleteSelected,
+                    onDeleteOne = { id -> onDeleteOne(id) },
+                    onLongSelect = onBeginSelect,
                 )
             }
         }
@@ -262,27 +302,133 @@ private fun ScheduleListSection(
     onEdit: (Long) -> Unit,
     onToggle: (id: Long, on: Boolean) -> Unit,
     topGap: androidx.compose.ui.unit.Dp,
+    selecting: Boolean = false,
+    selectedIds: Set<Long> = emptySet(),
+    onBeginSelect: (Long) -> Unit = {},
+    onToggleSelect: (Long) -> Unit = {},
+    onClearSelection: () -> Unit = {},
+    onDeleteSelected: () -> Unit = {},
+    onDeleteOne: (Long) -> Unit = {},
+    onLongSelect: (Long) -> Unit = {},
 ) {
-    Text(
-        "提醒",
-        style = OnTimeMetadata,
-        color = OnTimeColors.Gold.copy(alpha = 0.8f),
-        modifier = Modifier.padding(top = topGap, bottom = OnTimeSpacing.md),
-    )
+    if (selecting) {
+        // 批量操作条(替换眉标;删除=通栏主操作)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(top = topGap, bottom = OnTimeSpacing.md),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            Text(
+                "已选 ${selectedIds.size}",
+                style = OnTimeMetadata,
+                color = OnTimeColors.Gold,
+                modifier = Modifier.weight(1f),
+            )
+            dev.evesis.ontime.ui.components.QuietButton(onClick = onClearSelection, text = "取消")
+            dev.evesis.ontime.ui.components.PixelButton(onClick = onDeleteSelected) {
+                Text("删除", style = OnTimeButtonLabel)
+            }
+        }
+    } else {
+        Text(
+            "提醒",
+            style = OnTimeMetadata,
+            color = OnTimeColors.Gold.copy(alpha = 0.8f),
+            modifier = Modifier.padding(top = topGap, bottom = OnTimeSpacing.md),
+        )
+    }
     LazyColumn(verticalArrangement = Arrangement.spacedBy(OnTimeSpacing.xxs)) {
         items(reminders, key = { it.id }) { r ->
-            ScheduleRow(r, onEdit) { on -> onToggle(r.id, on) }
+            if (selecting) {
+                SelectRow(r, r.id in selectedIds) { onToggleSelect(r.id) }
+            } else {
+                SwipeDeleteRow(r = r, onEdit = onEdit, onToggle = onToggle, onDelete = onDeleteOne, onLongSelect = onLongSelect)
+            }
         }
     }
 }
 
-/** time-first 行:左侧 40sp 像素时刻(视觉主体),右标题,开关末端 */
+/** 普通行:左滑删除(官方 SwipeToDismissBox 手势,像素删除底)+ 点击编辑 + 长按进选择 */
 @Composable
-private fun ScheduleRow(r: Reminder, onEdit: (Long) -> Unit, onToggle: (Boolean) -> Unit) {
+private fun SwipeDeleteRow(
+    r: Reminder,
+    onEdit: (Long) -> Unit,
+    onToggle: (id: Long, on: Boolean) -> Unit,
+    onDelete: (Long) -> Unit,
+    onLongSelect: (Long) -> Unit = {},
+) {
+    val dismiss = rememberSwipeToDismissBoxState(
+        confirmValueChange = { v ->
+            if (v == SwipeToDismissBoxValue.EndToStart) { onDelete(r.id); true } else false
+        },
+        positionalThreshold = { it * 0.45f },
+    )
+    SwipeToDismissBox(
+        state = dismiss,
+        enableDismissFromStartToEnd = false,
+        backgroundContent = {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(OnTimeColors.Gold.copy(alpha = 0.25f)),
+                contentAlignment = androidx.compose.ui.Alignment.CenterEnd,
+            ) {
+                Text(
+                    "  删除 »",
+                    style = OnTimeButtonLabel,
+                    color = OnTimeColors.Gold,
+                    modifier = Modifier.padding(end = OnTimeSpacing.xl),
+                )
+            }
+        },
+    ) {
+        ScheduleRow(r, onEdit, onToggle = { on -> onToggle(r.id, on) }, onLongClick = { onLongSelect(r.id) })
+    }
+}
+
+/** 选择模式行:整行勾选(时刻位换 ✓ 块) */
+@Composable
+private fun SelectRow(r: Reminder, selected: Boolean, onToggle: () -> Unit) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable { onEdit(r.id) }
+            .combinedClickable(onClick = onToggle)
+            .padding(vertical = OnTimeSpacing.md),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        // 勾选块(替代时刻位;金底 ✓ / 暗框空)
+        Box(
+            Modifier
+                .padding(end = OnTimeSpacing.lg)
+                .size(40.dp)
+                .background(if (selected) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.05f))
+                .border(2.dp, if (selected) OnTimeColors.InkWhite else OnTimeColors.GoldDim.copy(alpha = 0.5f)),
+            contentAlignment = androidx.compose.ui.Alignment.Center,
+        ) {
+            if (selected) Text("✓", style = OnTimeButtonLabel, color = OnTimeColors.DeepBlue)
+        }
+        Text(
+            r.title,
+            style = OnTimeReminderTitle,
+            color = if (selected) OnTimeColors.Gold else OnTimeColors.InkWhite,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** time-first 行:左侧 40sp 像素时刻(视觉主体),右标题,开关末端;长按进选择模式 */
+@Composable
+private fun ScheduleRow(
+    r: Reminder,
+    onEdit: (Long) -> Unit,
+    onToggle: (Boolean) -> Unit,
+    onLongClick: () -> Unit = {},
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .combinedClickable(onClick = { onEdit(r.id) }, onLongClick = onLongClick)
             .padding(vertical = OnTimeSpacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
