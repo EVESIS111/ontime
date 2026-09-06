@@ -1,5 +1,6 @@
 package dev.evesis.ontime.ui.components
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -27,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.Role
@@ -45,6 +47,41 @@ import dev.evesis.ontime.ui.theme.OnTimeSpacing
  * 规则:零动画(点击/开关/输入即时);零涟漪;硬角;纯色;按压=状态切换非插值(内容下沉 1 单位);
  * Pixel Unit = 2dp(边框/位移/阶梯全部 2 的倍数)。
  */
+
+enum class PixelGlyph(val rows: List<String>) {
+    // 5×7 点阵,'#'=亮(绘制单位=Pixel Unit 网格;§54 正式图标,禁字符/emoji 顶替)
+    PREV(listOf("    #","   ##","  ###"," ####","  ###","   ##","    #")),
+    NEXT(listOf("#    ","##   ","###  ","#### ","###  ","##   ","#    ")),
+    ADD(listOf("  #  ","  #  ","#####","  #  ","  #  ","     ","     ")),
+    SETTINGS(listOf(" ### ","#   #","# # #","#   #"," ### ","     ","     ")),
+    PLAY(listOf("#    ","##   ","###  ","#### ","###  ","##   ","#    ")),
+    STOP(listOf("#####","#   #","#   #","#   #","#####","     ","     ")),
+    BACK(listOf("  #  "," #   ","#    "," #   ","  #  ","     ","     ")),
+    CLOSE(listOf("#   #"," # # ","  #  "," # # ","#   #","     ","     ")),
+    CHECK(listOf("    #","   ##","#  ##"," ## #","    #","     ","     ")),
+    WARNING(listOf("  #  ","  #  "," # # "," # # ","#####","     ","     ")),
+}
+
+/** 像素图标:点阵绘制,视觉可小;命中由外层 ontimeHitArea 保障(视觉/命中分离) */
+@Composable
+fun PixelIcon(glyph: PixelGlyph, modifier: Modifier = Modifier, sizeDp: Int = 20, color: Color = OnTimeColors.Gold) {
+    val density = LocalDensity.current
+    val cell = with(density) { (sizeDp.dp.toPx() / 5f).toInt().coerceAtLeast(1) }
+    val wDp = with(density) { (cell * 5).toDp() }
+    val hDp = with(density) { (cell * 7).toDp() }
+    val cellPx = cell.toFloat()
+    Canvas(modifier.size(wDp, hDp)) {
+        glyph.rows.forEachIndexed { y, row ->
+            row.forEachIndexed { x, c ->
+                if (c == '#') drawRect(
+                    color = color,
+                    topLeft = androidx.compose.ui.geometry.Offset(x * cellPx, y * cellPx),
+                    size = androidx.compose.ui.geometry.Size(cellPx, cellPx),
+                )
+            }
+        }
+    }
+}
 
 /** OnTimeTouchTarget(v11.3):命中区 ≥48dp,视觉元素居中不变大(视觉/命中分离) */
 fun Modifier.ontimeHitArea(minDp: Int = 48): Modifier = layout { measurable, _ ->
@@ -200,7 +237,10 @@ private fun StepArrow(text: String, onClick: () -> Unit) {
             .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(text, style = OnTimeButtonLabel, color = if (pressed) OnTimeColors.Gold else OnTimeColors.InkMuted)
+        PixelIcon(
+            glyph = if (text == "◀") PixelGlyph.PREV else PixelGlyph.NEXT,
+            color = if (pressed) OnTimeColors.Gold else OnTimeColors.InkMuted,
+        )
     }
 }
 
@@ -301,10 +341,11 @@ fun PixelIconButton(
             .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        Text(
-            icon,
-            style = OnTimeButtonLabel,
-            color = if (pressed) OnTimeColors.Gold else OnTimeColors.InkMuted,
-        )
+        val glyph = PixelGlyph.entries.firstOrNull { it.name == icon }
+        if (glyph != null) {
+            PixelIcon(glyph = glyph, color = if (pressed) OnTimeColors.Gold else OnTimeColors.InkMuted)
+        } else {
+            Text(icon, style = OnTimeButtonLabel, color = if (pressed) OnTimeColors.Gold else OnTimeColors.InkMuted)
+        }
     }
 }

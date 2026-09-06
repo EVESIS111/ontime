@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
+import dev.evesis.ontime.ui.components.PixelGlyph
+import dev.evesis.ontime.ui.components.PixelIcon
 import dev.evesis.ontime.ui.components.PixelToggle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -232,7 +234,7 @@ fun HomeShell(
                 .clickable(onClick = onAdd),
             contentAlignment = Alignment.Center,
         ) {
-            Text("+", style = OnTimeButtonLabel, color = OnTimeColors.DeepBlue)
+            PixelIcon(glyph = PixelGlyph.ADD, sizeDp = 24, color = OnTimeColors.DeepBlue)
         }
         // 设置入口(左下角,静默)
         Box(
@@ -244,7 +246,7 @@ fun HomeShell(
                 .clickable(onClick = onSettings),
             contentAlignment = Alignment.Center,
         ) {
-            Text("≡", style = OnTimeButtonLabel, color = OnTimeColors.InkMuted)
+            PixelIcon(glyph = PixelGlyph.SETTINGS, sizeDp = 22, color = OnTimeColors.InkMuted)
         }
     }
 }

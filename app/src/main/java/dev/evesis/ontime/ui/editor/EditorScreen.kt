@@ -6,7 +6,9 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.mutableStateOf
+import dev.evesis.ontime.ui.components.PixelGlyph
 import dev.evesis.ontime.ui.components.PixelIconButton
+import dev.evesis.ontime.ui.components.PixelIcon
 import dev.evesis.ontime.ui.theme.LocalOnTimeAdaptive
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -265,7 +267,7 @@ private fun ExperienceBehaviorSections(
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
             Text(label + " · " + text, style = OnTimeBody, color = OnTimeColors.InkMuted)
             PixelIconButton(
-                icon = if (PreviewPlayer.isPlaying()) "■" else "▶",
+                icon = if (PreviewPlayer.isPlaying()) "STOP" else "PLAY",
                 contentDescription = "试听",
                 onClick = {
                     val ok = PreviewPlayer.toggle(context, state.soundId, state.voiceId,

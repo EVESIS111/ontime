@@ -2,9 +2,15 @@ package dev.evesis.ontime.ui.catalog
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.border
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -20,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import dev.evesis.ontime.ui.components.FocusPanel
 import dev.evesis.ontime.ui.components.PixelButton
+import dev.evesis.ontime.ui.components.PixelGlyph
 import dev.evesis.ontime.ui.components.PixelStepper
 import dev.evesis.ontime.ui.components.PixelTextField
 import dev.evesis.ontime.ui.components.PixelToggle
@@ -91,6 +98,71 @@ fun CatalogScreen(onBack: () -> Unit) {
             )
             Spacer(Modifier.padding(top = OnTimeSpacing.md))
             PixelTextField(label = "文本输入", value = text, onValueChange = { text = it })
+
+            // ── 状态矩阵(§51)+ 命中框可视化(§50:虚线=48dp hit box;视觉=内部图标/开关)──
+            Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+            SectionHeader("STATE MATRIX")
+            Text("按下态:常态金框,按下=金底+内容下沉(截图为静态展示)", style = dev.evesis.ontime.ui.theme.OnTimeSecondary, color = OnTimeColors.InkMuted, modifier = Modifier.padding(bottom = OnTimeSpacing.sm))
+            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(OnTimeSpacing.lg), modifier = Modifier.fillMaxWidth()) {
+                dev.evesis.ontime.ui.components.PixelButton(onClick = {}, modifier = Modifier.weight(1f)) {
+                    Text("常态", style = dev.evesis.ontime.ui.theme.OnTimeButtonLabel)
+                }
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(dev.evesis.ontime.ui.theme.OnTimeSizing.buttonHeight)
+                        .background(OnTimeColors.Gold),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("按下", style = dev.evesis.ontime.ui.theme.OnTimeButtonLabel, color = OnTimeColors.DeepBlue)
+                }
+                dev.evesis.ontime.ui.components.PixelButton(onClick = {}, enabled = false, modifier = Modifier.weight(1f)) {
+                    Text("禁用", style = dev.evesis.ontime.ui.theme.OnTimeButtonLabel)
+                }
+            }
+            Spacer(Modifier.padding(top = OnTimeSpacing.md))
+            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(OnTimeSpacing.lg), modifier = Modifier.fillMaxWidth()) {
+                Text("选中(金底):", style = dev.evesis.ontime.ui.theme.OnTimeMetadata, color = OnTimeColors.InkMuted, modifier = Modifier.padding(top = OnTimeSpacing.sm))
+                Text(
+                    "每天",
+                    style = dev.evesis.ontime.ui.theme.OnTimeButtonLabel,
+                    color = OnTimeColors.DeepBlue,
+                    modifier = Modifier
+                        .background(OnTimeColors.Gold)
+                        .border(2.dp, OnTimeColors.InkWhite)
+                        .padding(horizontal = OnTimeSpacing.xl, vertical = OnTimeSpacing.md),
+                )
+                Text(
+                    "试听中",
+                    style = dev.evesis.ontime.ui.theme.OnTimeButtonLabel,
+                    color = OnTimeColors.Gold,
+                    modifier = Modifier.padding(top = OnTimeSpacing.sm),
+                )
+                Text("不可用", style = dev.evesis.ontime.ui.theme.OnTimeMetadata, color = OnTimeColors.Gold, modifier = Modifier.padding(top = OnTimeSpacing.sm))
+            }
+            Spacer(Modifier.padding(top = OnTimeSpacing.md))
+            SectionHeader("HIT BOX")
+            Text("小图标外有 48dp 命中区(此页以描边示意):", style = dev.evesis.ontime.ui.theme.OnTimeSecondary, color = OnTimeColors.InkMuted)
+            Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(OnTimeSpacing.xl), modifier = Modifier.padding(top = OnTimeSpacing.sm)) {
+                Box(
+                    Modifier
+                        .size(48.dp)
+                        .border(1.dp, OnTimeColors.VoiceCyan.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center,
+                ) { dev.evesis.ontime.ui.components.PixelIcon(glyph = PixelGlyph.PREV) }
+                Box(
+                    Modifier
+                        .size(48.dp)
+                        .border(1.dp, OnTimeColors.VoiceCyan.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center,
+                ) { dev.evesis.ontime.ui.components.PixelIcon(glyph = PixelGlyph.PLAY) }
+                Box(
+                    Modifier
+                        .size(48.dp)
+                        .border(1.dp, OnTimeColors.VoiceCyan.copy(alpha = 0.6f)),
+                    contentAlignment = Alignment.Center,
+                ) { dev.evesis.ontime.ui.components.PixelIcon(glyph = PixelGlyph.SETTINGS, sizeDp = 22) }
+            }
 
             Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
             QuietButton(onClick = onBack, text = "← 返回", emphasize = true)
