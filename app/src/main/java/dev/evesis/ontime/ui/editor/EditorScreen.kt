@@ -132,10 +132,9 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
                 }
                 ScheduleEngine.RepeatType.INTERVAL -> {
                     FieldRow("间隔(分钟)") {
-                        PixelStepper(label = "", value = "${state.intervalMinutes}",
+                        ValueStepper(value = "${state.intervalMinutes}",
                             onPrev = { viewModel.update { it.copy(intervalMinutes = (it.intervalMinutes - if (it.intervalMinutes <= 15) 1 else 5).coerceIn(1, 1440)) } },
-                            onNext = { viewModel.update { it.copy(intervalMinutes = (it.intervalMinutes + if (it.intervalMinutes < 15) 1 else 5).coerceIn(1, 1440)) } },
-                            valueStyle = OnTimeRowTime, valueColor = OnTimeColors.Gold)
+                            onNext = { viewModel.update { it.copy(intervalMinutes = (it.intervalMinutes + if (it.intervalMinutes < 15) 1 else 5).coerceIn(1, 1440)) } })
                     }
                     FieldRow("时间窗口") {
                         QuietButton(
@@ -156,11 +155,11 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
                 }
                 ScheduleEngine.RepeatType.ONCE -> {
                     FieldRow("日期") {
-                        PixelStepper(
-                            label = "", value = SimpleDateFormat("M月d日", Locale.CHINA).format(Date(state.atMillis)),
+                        ValueStepper(
+                            value = SimpleDateFormat("M月d日", Locale.CHINA).format(Date(state.atMillis)),
+                            big = false,
                             onPrev = { viewModel.update { it.copy(atMillis = it.atMillis - 86_400_000L) } },
-                            onNext = { viewModel.update { it.copy(atMillis = it.atMillis + 86_400_000L) } },
-                            valueStyle = OnTimeBodyLarge, valueColor = OnTimeColors.InkWhite)
+                            onNext = { viewModel.update { it.copy(atMillis = it.atMillis + 86_400_000L) } })
                     }
                     FieldRow("时间") { TimeStepper(minutesFrom(state.atMillis)) { hm ->
                         viewModel.update {
@@ -198,10 +197,10 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
             Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
             SectionHeader("行为")
             FieldRow("稍后提醒(分钟)") {
-                PixelStepper(label = "", value = "${state.snoozeMinutes}",
+                ValueStepper(value = "${state.snoozeMinutes}",
+                    big = false,
                     onPrev = { viewModel.update { it.copy(snoozeMinutes = (it.snoozeMinutes - if (it.snoozeMinutes <= 15) 1 else 5).coerceIn(1, 60)) } },
-                    onNext = { viewModel.update { it.copy(snoozeMinutes = (it.snoozeMinutes + if (it.snoozeMinutes < 15) 1 else 5).coerceIn(1, 60)) } },
-                    valueStyle = OnTimeBodyLarge, valueColor = OnTimeColors.InkWhite)
+                    onNext = { viewModel.update { it.copy(snoozeMinutes = (it.snoozeMinutes + if (it.snoozeMinutes < 15) 1 else 5).coerceIn(1, 60)) } })
             }
 
             // ── 保存(唯一;safe bottom)──
@@ -248,26 +247,54 @@ private fun FieldRow(label: String, content: @Composable () -> Unit) {
     }
 }
 
-/** 时间步进(◀ HH ▶ : ◀ mm ▶;左右严格镜像=同一 StepArrow 组件) */
+/** 时间:值行(HH : mm 大字居中)+ 操作行(时组|分组各半宽)——结构上杜绝行内挤压重叠 */
 @Composable
 private fun TimeStepper(minutes: Int, onPick: (Int) -> Unit) {
     val h = minutes / 60
     val m = minutes % 60
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        StepperNum("%02d".format(h), onPrev = { onPick(((h + 23) % 24) * 60 + m) }, onNext = { onPick(((h + 1) % 24) * 60 + m) })
-        Text(":", style = OnTimeRowTime, color = OnTimeColors.InkMuted)
-        StepperNum("%02d".format(m), onPrev = { onPick(h * 60 + (m + 59) % 60) }, onNext = { onPick(h * 60 + (m + 1) % 60) })
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            "%02d : %02d".format(h, m),
+            style = OnTimeRowTime,
+            color = OnTimeColors.Gold,
+            modifier = Modifier.padding(vertical = OnTimeSpacing.xs),
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.md)) {
+            StepperGroup(Modifier.weight(1f), "时", onPrev = { onPick(((h + 23) % 24) * 60 + m) }, onNext = { onPick(((h + 1) % 24) * 60 + m) })
+            StepperGroup(Modifier.weight(1f), "分", onPrev = { onPick(h * 60 + (m + 59) % 60) }, onNext = { onPick(h * 60 + (m + 1) % 60) })
+        }
     }
 }
 
+/** 操作组:◀ 标签 ▶;weight(1f) 均分,组内 SpaceEvenly,永不超宽 */
 @Composable
-private fun StepperNum(value: String, onPrev: () -> Unit, onNext: () -> Unit) {
-    PixelStepper(label = "", value = value, onPrev = onPrev, onNext = onNext,
-        valueStyle = OnTimeRowTime, valueColor = OnTimeColors.Gold)
+private fun StepperGroup(modifier: Modifier = Modifier, label: String, onPrev: () -> Unit, onNext: () -> Unit) {
+    Row(
+        modifier,
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        QuietButton(onClick = onPrev, text = "◀", modifier = Modifier.weight(1f))
+        Text(label, style = OnTimeMetadata, color = OnTimeColors.InkMuted)
+        QuietButton(onClick = onNext, text = "▶", modifier = Modifier.weight(1f))
+    }
+}
+
+/** 数字:值行(大/中字居中)+ 操作行(◀ ▶ 均分) */
+@Composable
+private fun ValueStepper(value: String, big: Boolean = true, onPrev: () -> Unit, onNext: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            value,
+            style = if (big) OnTimeRowTime else OnTimeBodyLarge,
+            color = if (big) OnTimeColors.Gold else OnTimeColors.InkWhite,
+            modifier = Modifier.padding(vertical = OnTimeSpacing.xs),
+        )
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.md)) {
+            QuietButton(onClick = onPrev, text = "◀", modifier = Modifier.weight(1f))
+            QuietButton(onClick = onNext, text = "▶", modifier = Modifier.weight(1f))
+        }
+    }
 }
 
 /** 重复类型四选(统一 cell:minWidth+同高同 padding;选中金底) */
