@@ -28,7 +28,17 @@ class Db private constructor(ctx: Context) {
 
     fun setNextFire(id: Long, t: Long) = r.setNextFire(id, t)
     fun setLastFired(id: Long, t: Long) = r.setLastFired(id, t)
-    fun setEnabled(id: Long, on: Boolean) = r.setEnabled(id, on)
+    fun setEnabled(id: Long, on: Boolean) {
+        // 归零事件(09-05/09-06 两次未归因)追踪:记录调用方,写入失败也不阻断主操作
+        try {
+            f.insert(FireLogEntity(reminderId = id, title = "[AUDIT]",
+                plannedAt = 0, actualAt = System.currentTimeMillis(), latencyMs = 0,
+                audio = if (on) "on" else "off",
+                note = Throwable().stackTrace.drop(1).take(4).joinToString("|") { it.className.substringAfterLast('.') + "." + it.methodName }))
+            f.trimTo1000()
+        } catch (e: Exception) { }
+        r.setEnabled(id, on)
+    }
 
     fun seedDefaultsIfEmpty() {
         if (list().isNotEmpty()) return

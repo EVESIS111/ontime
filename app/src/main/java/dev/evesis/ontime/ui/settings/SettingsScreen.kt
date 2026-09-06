@@ -2,6 +2,7 @@ package dev.evesis.ontime.ui.settings
 
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -54,6 +55,7 @@ fun SettingsScreen(onBack: () -> Unit, onCatalog: () -> Unit = {}) {
         Modifier
             .fillMaxSize()
             .background(OnTimeColors.DeepBlue)
+            .safeDrawingPadding()
             .verticalScroll(rememberScrollState())
             .padding(
                 top = OnTimeSpacing.xxl,

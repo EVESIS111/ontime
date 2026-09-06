@@ -26,6 +26,7 @@ import dev.evesis.ontime.ui.home.HomeScreen
 import dev.evesis.ontime.ui.home.HomeViewModel
 import dev.evesis.ontime.ui.catalog.CatalogScreen
 import dev.evesis.ontime.ui.settings.SettingsScreen
+import dev.evesis.ontime.ui.theme.OnTimeAdaptive
 import dev.evesis.ontime.ui.theme.OnTimeTheme
 
 class MainActivity : ComponentActivity() {
@@ -54,6 +55,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             OnTimeTheme {
+                OnTimeAdaptive {
                 val nav = rememberNavController()
                 // Instant Pixel Policy(v11.2):导航零动画——点击即到,返回即回
                 NavHost(
@@ -92,6 +94,7 @@ class MainActivity : ComponentActivity() {
                     composable("catalog") {
                         CatalogScreen(onBack = { nav.popBackStack() })
                     }
+                }
                 }
             }
         }

@@ -1,6 +1,11 @@
 package dev.evesis.ontime.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import dev.evesis.ontime.ui.theme.LocalOnTimeAdaptive
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -26,6 +31,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.evesis.ontime.Reminder
@@ -109,16 +115,20 @@ fun HomeShell(
     val now = rememberMinuteTick()
     val active = reminders.filter { it.enabled && it.nextFireAt > 0 }
     val next = active.minByOrNull { it.nextFireAt }
+    val spec = LocalOnTimeAdaptive.current
+    val heroStyle = OnTimeHeroTime.copy(fontSize = spec.heroTimeSp.sp, lineHeight = (spec.heroTimeSp + 20).sp)
 
     Box(
         Modifier
             .fillMaxSize()
             .background(OnTimeColors.DeepBlue)
+            .safeDrawingPadding()          // v11.3:系统栏/手势区/刘海安全
     ) {
+        Row(Modifier.fillMaxSize()) {       // 横屏 expanded:左 Hero/右 列表(§36);其余单列
         Column(
             Modifier
-                .fillMaxSize()
-                .padding(horizontal = OnTimeSpacing.gutterExpanded),
+                .weight(1f)
+                .padding(horizontal = spec.gutter),
         ) {
             Column(
                 Modifier
@@ -129,7 +139,7 @@ fun HomeShell(
                 // ① Hero 时钟(唯一居中元素;页面视觉支配)
                 Text(
                     SimpleDateFormat("HH:mm", Locale.CHINA).format(Date(now)),
-                    style = OnTimeHeroTime,          // 120sp 巨物
+                    style = heroStyle,               // 三档离散(§40):矮窗 72 / 手机 88 / 大屏 120
                     color = OnTimeColors.InkWhite,
                 )
                 Text(
@@ -187,21 +197,29 @@ fun HomeShell(
                 )
             }
 
-            // ③ time-first 调度列表(大时间主导行;左对齐扫描)
-            Text(
-                "提醒",
-                style = OnTimeMetadata,
-                color = OnTimeColors.Gold.copy(alpha = 0.8f),
-                modifier = Modifier.padding(
-                    top = if (next != null) OnTimeSpacing.sectionGap else OnTimeSpacing.xxl,
-                    bottom = OnTimeSpacing.md,
-                ),
+            // ③ 单栏:列表在主列内继续;双栏:列表在右列
+            ScheduleListSection(
+                reminders = reminders,
+                onEdit = onEdit,
+                onToggle = onToggle,
+                topGap = if (spec.twoPane) 0.dp else OnTimeSpacing.sectionGap,
             )
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(OnTimeSpacing.xxs)) {
-                items(reminders, key = { it.id }) { r ->
-                    ScheduleRow(r, onEdit) { on -> onToggle(r.id, on) }
-                }
+        }
+        if (spec.twoPane) {
+            Column(
+                Modifier
+                    .weight(1f)
+                    .padding(horizontal = spec.gutter)
+                    .safeDrawingPadding(),
+            ) {
+                ScheduleListSection(
+                    reminders = reminders,
+                    onEdit = onEdit,
+                    onToggle = onToggle,
+                    topGap = OnTimeSpacing.heroTop,
+                )
             }
+        }
         }
 
         // ④ 浮动新增(右下角像素金块)
@@ -227,6 +245,27 @@ fun HomeShell(
             contentAlignment = Alignment.Center,
         ) {
             Text("≡", style = OnTimeButtonLabel, color = OnTimeColors.InkMuted)
+        }
+    }
+}
+
+/** 调度列表区(单/双栏共用,单一 Source of Truth §93) */
+@Composable
+private fun ScheduleListSection(
+    reminders: List<Reminder>,
+    onEdit: (Long) -> Unit,
+    onToggle: (id: Long, on: Boolean) -> Unit,
+    topGap: androidx.compose.ui.unit.Dp,
+) {
+    Text(
+        "提醒",
+        style = OnTimeMetadata,
+        color = OnTimeColors.Gold.copy(alpha = 0.8f),
+        modifier = Modifier.padding(top = topGap, bottom = OnTimeSpacing.md),
+    )
+    LazyColumn(verticalArrangement = Arrangement.spacedBy(OnTimeSpacing.xxs)) {
+        items(reminders, key = { it.id }) { r ->
+            ScheduleRow(r, onEdit) { on -> onToggle(r.id, on) }
         }
     }
 }

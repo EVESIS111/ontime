@@ -1,6 +1,13 @@
 package dev.evesis.ontime.ui.editor
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.runtime.mutableStateOf
+import dev.evesis.ontime.ui.components.PixelIconButton
+import dev.evesis.ontime.ui.theme.LocalOnTimeAdaptive
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,6 +49,7 @@ import dev.evesis.ontime.ui.theme.OnTimeHeroTime
 import dev.evesis.ontime.ui.theme.OnTimeLayout
 import dev.evesis.ontime.ui.theme.OnTimeMetadata
 import dev.evesis.ontime.ui.theme.OnTimeScreenTitle
+import dev.evesis.ontime.ui.theme.OnTimeSecondary
 import dev.evesis.ontime.ui.theme.OnTimeSizing
 import dev.evesis.ontime.ui.theme.OnTimeSpacing
 import dev.evesis.ontime.ui.theme.OnTimeTheme
@@ -62,18 +70,27 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
     LaunchedEffect(id) { viewModel.load(id, context) }
     LaunchedEffect(state.finished) { if (state.finished) onDone() }
 
-    Column(
+    val spec = LocalOnTimeAdaptive.current
+    var previewMsg by remember { mutableStateOf<String?>(null) }
+
+    Row(
         Modifier
             .fillMaxSize()
             .background(OnTimeColors.DeepBlue)
-            .verticalScroll(rememberScrollState())
+            .safeDrawingPadding()          // v11.3:安全区
+            .imePadding(),                 // v11.3:键盘不盖输入/保存
+    ) {
+    Column(
+        Modifier
+            .weight(1f)
+            .then(if (spec.twoPane) Modifier.verticalScroll(rememberScrollState()) else Modifier)
             .padding(
                 top = OnTimeSpacing.xxl,
                 bottom = OnTimeSpacing.gutter,
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = OnTimeSpacing.xl)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = spec.gutter)) {
 
             Row(
                 Modifier.fillMaxWidth(),
@@ -121,7 +138,7 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
                             .background(if (selected) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.05f))
                             .border(if (selected) OnTimeSizing.borderFocused else OnTimeSizing.hairline, OnTimeColors.Gold.copy(alpha = if (selected) 1f else 0.3f))
                             .clickable { viewModel.update { it.copy(repeatType = t) } }
-                            .padding(horizontal = OnTimeSpacing.lg, vertical = OnTimeSpacing.sm),
+                            .padding(horizontal = OnTimeSpacing.xl, vertical = OnTimeSpacing.md),
                     )
                 }
             }
@@ -186,14 +203,81 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
             SectionHeader("行为")
             NumberField("稍后提醒(分钟)", state.snoozeMinutes) { v -> viewModel.update { it.copy(snoozeMinutes = v.coerceIn(1, 60)) } }
 
-            // ── 保存(唯一通栏主操作;取消/删除已在顶部)─────────────
-            Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
-            PixelButton(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
-                Text("保存", style = OnTimeButtonLabel)
+            if (!spec.twoPane) {
+                ExperienceBehaviorSections(viewModel, state) { previewMsg = it }
+                Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+                PixelButton(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
+                    Text("保存", style = OnTimeButtonLabel)
+                }
+                Spacer(Modifier.padding(top = OnTimeSpacing.xxl))
             }
-            Spacer(Modifier.padding(top = OnTimeSpacing.xxl))
         }
     }
+    if (spec.twoPane) {
+        Column(
+            Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(top = OnTimeSpacing.xxl, bottom = OnTimeSpacing.gutter),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = spec.gutter)) {
+                ExperienceBehaviorSections(viewModel, state) { previewMsg = it }
+                Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+                PixelButton(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
+                    Text("保存", style = OnTimeButtonLabel)
+                }
+                previewMsg?.let {
+                    Text(it, style = OnTimeSecondary, color = OnTimeColors.Gold,
+                        modifier = Modifier.padding(top = OnTimeSpacing.sm))
+                }
+                Spacer(Modifier.padding(top = OnTimeSpacing.xxl))
+            }
+        }
+    }
+    }
+}
+
+/** 体验+行为分组(单/双栏共用;含试听反馈 §18) */
+@Composable
+private fun ExperienceBehaviorSections(
+    viewModel: EditorViewModel,
+    state: dev.evesis.ontime.ui.editor.EditorUiState,
+    onPreviewMsg: (String?) -> Unit,
+) {
+    val context = LocalContext.current
+    Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+    SectionHeader("体验")
+    CyclerField(
+        label = "音色",
+        text = if (state.voiceId.isEmpty()) "跟随系统" else state.voiceId,
+        onPrev = { viewModel.update { it.copy(voiceId = cycle(it.availableVoices, it.voiceId, -1)) } },
+        onNext = { viewModel.update { it.copy(voiceId = cycle(it.availableVoices, it.voiceId, +1)) } },
+    )
+    Spacer(Modifier.padding(top = OnTimeSpacing.md))
+    CyclerField(
+        label = "音效",
+        text = Sounds.byId(state.soundId).label,
+        onPrev = { viewModel.update { it.copy(soundId = cycle(Sounds.ALL.map { s -> s.id }, it.soundId, -1)) } },
+        onNext = { viewModel.update { it.copy(soundId = cycle(Sounds.ALL.map { s -> s.id }, it.soundId, +1)) } },
+    ) { label, text ->
+        // 试听行(▶/■ 即时态;失败给内联提示,不静默 §19)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
+            Text(label + " · " + text, style = OnTimeBody, color = OnTimeColors.InkMuted)
+            PixelIconButton(
+                icon = if (PreviewPlayer.isPlaying()) "■" else "▶",
+                contentDescription = "试听",
+                onClick = {
+                    val ok = PreviewPlayer.toggle(context, state.soundId, state.voiceId,
+                        state.message.split('|').firstOrNull()?.trim().orEmpty().ifBlank { state.title })
+                    onPreviewMsg(if (ok) null else "试听不可用(该台词无语音文件)")
+                },
+            )
+        }
+    }
+    Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+    SectionHeader("行为")
+    NumberField("稍后提醒(分钟)", state.snoozeMinutes) { v -> viewModel.update { it.copy(snoozeMinutes = v.coerceIn(1, 60)) } }
 }
 
 private val ScheduleEngine.RepeatType.label: String
@@ -265,7 +349,10 @@ private fun DateTimeField(atMillis: Long, onPick: (Long) -> Unit) {
 @Composable
 private fun WeekPicker(weekMask: Int, onToggle: (bit: Int, on: Boolean) -> Unit) {
     val names = listOf("日", "一", "二", "三", "四", "五", "六")
-    Row(horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.sm)) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.sm),
+        verticalArrangement = Arrangement.spacedBy(OnTimeSpacing.sm),
+    ) {
         names.forEachIndexed { i, name ->
             val bit = 1 shl i
             val on = weekMask and bit != 0
@@ -276,7 +363,7 @@ private fun WeekPicker(weekMask: Int, onToggle: (bit: Int, on: Boolean) -> Unit)
                 modifier = Modifier
                     .background(if (on) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.05f))
                     .clickable { onToggle(bit, !on) }
-                    .padding(horizontal = OnTimeSpacing.lg, vertical = OnTimeSpacing.sm),
+                    .padding(horizontal = OnTimeSpacing.lg, vertical = OnTimeSpacing.lg),
             )
         }
     }
@@ -299,6 +386,21 @@ private fun NumberField(label: String, value: Int, onChange: (Int) -> Unit) {
 private fun CyclerField(label: String, text: String, onPrev: () -> Unit, onNext: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = OnTimeBody, color = OnTimeColors.InkMuted, modifier = Modifier.weight(1f))
+        QuietButton(onClick = onPrev, text = "◀")
+        Text(" $text ", style = OnTimeBodyLarge, color = OnTimeColors.Gold)
+        QuietButton(onClick = onNext, text = "▶")
+    }
+}
+
+@Composable
+private fun CyclerField(
+    label: String, text: String,
+    onPrev: () -> Unit, onNext: () -> Unit,
+    content: @Composable (label: String, text: String) -> Unit,
+) {
+    content(label, text)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text("选择", style = OnTimeMetadata, color = OnTimeColors.InkMuted, modifier = Modifier.weight(1f))
         QuietButton(onClick = onPrev, text = "◀")
         Text(" $text ", style = OnTimeBodyLarge, color = OnTimeColors.Gold)
         QuietButton(onClick = onNext, text = "▶")

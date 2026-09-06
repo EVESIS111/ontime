@@ -1,6 +1,9 @@
 package dev.evesis.ontime.ui.alert
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.safeDrawingPadding
+import dev.evesis.ontime.ui.theme.LocalOnTimeAdaptive
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -37,19 +40,23 @@ fun AlertScreen(
     onSlideAck: () -> Unit,
     onSnooze: () -> Unit,
 ) {
-    Column(
+    val spec = LocalOnTimeAdaptive.current
+    Row(
         Modifier
             .fillMaxSize()
             .background(OnTimeColors.DeepBlue)
-            .padding(OnTimeSpacing.gutterExpanded),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            .safeDrawingPadding()
+            .padding(horizontal = spec.gutter),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+        val pane = @Composable { weight: Float ->
         Column(
             Modifier
+                .weight(1f)
                 .widthIn(max = OnTimeLayout.controlMaxWidth)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
         ) {
             // 角色席位:眉标 + 角色色(声音是角色,画面给席位)
             Text(
@@ -80,14 +87,17 @@ fun AlertScreen(
                 onConfirm = onSlideAck,
                 modifier = Modifier.fillMaxWidth(),
             )
-            QuietButton(
-                onClick = onSnooze,
-                text = snoozeLabel,
-                emphasize = false,
-                modifier = Modifier
-                    .padding(top = OnTimeSpacing.md)
-                    .align(Alignment.CenterHorizontally),
-            )
+            if (!spec.twoPane) {
+                QuietButton(
+                    onClick = onSnooze,
+                    text = snoozeLabel,
+                    emphasize = false,
+                    modifier = Modifier
+                        .padding(top = OnTimeSpacing.md)
+                        .align(Alignment.CenterHorizontally),
+                )
+            }
+        }
         }
     }
 }

@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
+import kotlin.math.max
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -42,6 +45,15 @@ import dev.evesis.ontime.ui.theme.OnTimeSpacing
  * 规则:零动画(点击/开关/输入即时);零涟漪;硬角;纯色;按压=状态切换非插值(内容下沉 1 单位);
  * Pixel Unit = 2dp(边框/位移/阶梯全部 2 的倍数)。
  */
+
+/** OnTimeTouchTarget(v11.3):命中区 ≥48dp,视觉元素居中不变大(视觉/命中分离) */
+fun Modifier.ontimeHitArea(minDp: Int = 48): Modifier = layout { measurable, _ ->
+    val placeable = measurable.measure(Constraints())
+    val min = with(density) { minDp.dp.toPx().toInt() }
+    val w = max(placeable.width, min)
+    val h = max(placeable.height, min)
+    layout(w, h) { placeable.placeRelative((w - placeable.width) / 2, (h - placeable.height) / 2) }
+}
 
 /** 像素按钮:正常=金框透明底;按下=金底+内容下沉 1 单位;禁用=暗框。零涟漪零动画。 */
 @Composable
@@ -93,7 +105,7 @@ fun QuietButton(
     val pressed by interaction.collectIsPressedAsState()
     Box(
         modifier
-            .height(OnTimeSizing.buttonHeight)
+            .ontimeHitArea()
             .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
@@ -120,11 +132,16 @@ fun PixelToggle(
     val pressed by interaction.collectIsPressedAsState()
     Box(
         modifier
+            .ontimeHitArea()      // hit ≥48dp,视觉/命中分离(v11.3)
             .size(width = 72.dp, height = 40.dp)
             .background(if (checked) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.08f))
             .border(
                 OnTimeSizing.borderFocused,
-                if (checked) OnTimeColors.InkWhite else OnTimeColors.GoldDim.copy(alpha = 0.5f),
+                when {
+                    pressed -> OnTimeColors.InkWhite                       // 按下即亮(v11.3 反馈)
+                    checked -> OnTimeColors.InkWhite
+                    else -> OnTimeColors.GoldDim.copy(alpha = 0.5f)
+                },
                 RectangleShape,
             )
             .clickable(interactionSource = interaction, indication = null, role = Role.Switch, onClick = { onCheckedChange(!checked) }),
@@ -176,6 +193,7 @@ private fun StepArrow(text: String, onClick: () -> Unit) {
     val pressed by interaction.collectIsPressedAsState()
     Box(
         Modifier
+            .ontimeHitArea()
             .size(OnTimeSizing.minTouchTarget)
             .background(if (pressed) OnTimeColors.InkWhite.copy(alpha = 0.12f) else Color.Transparent)
             .border(OnTimeSizing.hairline, OnTimeColors.GoldDim.copy(alpha = 0.4f), RectangleShape)
@@ -261,6 +279,32 @@ fun SectionHeader(label: String, modifier: Modifier = Modifier) {
                 .weight(1f)
                 .height(OnTimeSizing.hairline)
                 .background(OnTimeColors.Gold.copy(alpha = 0.25f)),
+        )
+    }
+}
+
+
+/** 像素图标钮:字符图标视觉小,命中区 ≥48dp(v11.3 §9/§10;替代散落的 emoji/小箭头) */
+@Composable
+fun PixelIconButton(
+    icon: String,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(
+        modifier
+            .ontimeHitArea()
+            .background(if (pressed) OnTimeColors.InkWhite.copy(alpha = 0.12f) else Color.Transparent)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            icon,
+            style = OnTimeButtonLabel,
+            color = if (pressed) OnTimeColors.Gold else OnTimeColors.InkMuted,
         )
     }
 }
