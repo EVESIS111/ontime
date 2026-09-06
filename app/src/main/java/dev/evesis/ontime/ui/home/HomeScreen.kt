@@ -14,9 +14,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import dev.evesis.ontime.ui.components.PixelToggle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -227,7 +226,7 @@ fun HomeShell(
                 .clickable(onClick = onSettings),
             contentAlignment = Alignment.Center,
         ) {
-            Text("⚙", style = OnTimeButtonLabel, color = OnTimeColors.InkMuted)
+            Text("≡", style = OnTimeButtonLabel, color = OnTimeColors.InkMuted)
         }
     }
 }
@@ -255,16 +254,7 @@ private fun ScheduleRow(r: Reminder, onEdit: (Long) -> Unit, onToggle: (Boolean)
                 .weight(1f)
                 .padding(horizontal = OnTimeSpacing.lg),
         )
-        Switch(
-            checked = r.enabled,
-            onCheckedChange = onToggle,
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = OnTimeColors.Gold,
-                checkedThumbColor = OnTimeColors.DeepBlue,
-                uncheckedTrackColor = OnTimeColors.InkWhite.copy(alpha = 0.12f),
-                uncheckedThumbColor = OnTimeColors.InkMuted,
-            ),
-        )
+        PixelToggle(checked = r.enabled, onCheckedChange = onToggle)
     }
 }
 

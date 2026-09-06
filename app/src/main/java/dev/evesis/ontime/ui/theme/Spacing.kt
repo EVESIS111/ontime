@@ -55,4 +55,5 @@ object OnTimeSizing {
     val fabSize = 64.dp           // 浮动新增/设置角块
     val hairline = 1.dp        // 细分隔线
     val borderFocused = 2.dp   // 焦点元素像素描边(唯一允许的粗框)
+    val pixelUnit = 2.dp       // Pixel Unit(v11.2):边框/位移/阶梯的统一基础单位
 }

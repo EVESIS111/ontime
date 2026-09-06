@@ -1,51 +1,236 @@
 package dev.evesis.ontime.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import dev.evesis.ontime.ui.theme.OnTimeBodyLarge
 import dev.evesis.ontime.ui.theme.OnTimeButtonLabel
 import dev.evesis.ontime.ui.theme.OnTimeColors
-import dev.evesis.ontime.ui.theme.OnTimeEyebrow
+import dev.evesis.ontime.ui.theme.OnTimeMetadata
 import dev.evesis.ontime.ui.theme.OnTimeSizing
 import dev.evesis.ontime.ui.theme.OnTimeSpacing
 
 /*
- * OnTime 组件 v2(Visual Redesign;框预算:全屏同时最多 1-2 处 2dp 金框)
- * 层级手段优先级(§19):Spacing > Opacity > Typography > Background > Alignment > Border。
+ * OnTimePixelKit(v11.2)—— Instant Pixel Utility
+ * 规则:零动画(点击/开关/输入即时);零涟漪;硬角;纯色;按压=状态切换非插值(内容下沉 1 单位);
+ * Pixel Unit = 2dp(边框/位移/阶梯全部 2 的倍数)。
  */
 
-/** 无框静默面:列表行/设置分组/输入组的底(取代 v1 的"每个内容都装框") */
+/** 像素按钮:正常=金框透明底;按下=金底+内容下沉 1 单位;禁用=暗框。零涟漪零动画。 */
+@Composable
+fun PixelButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    content: @Composable RowScope.() -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(
+        modifier
+            .height(OnTimeSizing.buttonHeight)
+            .background(if (pressed && enabled) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.05f))
+            .border(
+                OnTimeSizing.borderFocused,
+                when { !enabled -> OnTimeColors.GoldDim.copy(alpha = 0.4f); pressed -> OnTimeColors.InkWhite; else -> OnTimeColors.Gold },
+                RectangleShape,
+            )
+            .clickable(
+                interactionSource = interaction,
+                indication = null,          // 无涟漪
+                enabled = enabled,
+                role = Role.Button,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            Modifier
+                .offset { IntOffset(0, if (pressed) OnTimeSizing.pixelUnit.roundToPx() else 0) }   // 按压下沉 1 像素单位
+                .padding(horizontal = OnTimeSpacing.xl),
+            horizontalArrangement = Arrangement.Center,
+            content = content,
+        )
+    }
+}
+
+/** 次级文字按钮(静默) */
+@Composable
+fun QuietButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    text: String,
+    emphasize: Boolean = false,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(
+        modifier
+            .height(OnTimeSizing.buttonHeight)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text,
+            style = OnTimeButtonLabel,
+            color = when {
+                pressed -> OnTimeColors.Gold
+                emphasize -> OnTimeColors.Gold.copy(alpha = 0.85f)
+                else -> OnTimeColors.InkMuted
+            },
+        )
+    }
+}
+
+/** 像素开关:方轨+方滑块,点击即时换位(零动画);开=金,关=暗 */
+@Composable
+fun PixelToggle(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(
+        modifier
+            .size(width = 72.dp, height = 40.dp)
+            .background(if (checked) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.08f))
+            .border(
+                OnTimeSizing.borderFocused,
+                if (checked) OnTimeColors.InkWhite else OnTimeColors.GoldDim.copy(alpha = 0.5f),
+                RectangleShape,
+            )
+            .clickable(interactionSource = interaction, indication = null, role = Role.Switch, onClick = { onCheckedChange(!checked) }),
+        contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
+    ) {
+        // 滑块方块:开=右+深蓝带孔感,关=左+灰;pressed 时加亮边
+        Box(
+            Modifier
+                .padding(OnTimeSizing.borderFocused)
+                .size(32.dp)
+                .background(if (checked) OnTimeColors.DeepBlue else OnTimeColors.InkMuted),
+        )
+    }
+}
+
+/** 像素步进器:◀ 值 ▶(替代 Material TimePicker 对话框;点即变) */
+@Composable
+fun PixelStepper(
+    label: String,
+    value: String,
+    onPrev: () -> Unit,
+    onNext: () -> Unit,
+    valueStyle: TextStyle = OnTimeButtonLabel,
+    valueColor: Color = OnTimeColors.InkWhite,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        if (label.isNotEmpty()) {
+            Text(label, style = OnTimeMetadata, color = OnTimeColors.InkMuted, modifier = Modifier.weight(1f))
+        }
+        StepArrow(text = "◀", onClick = onPrev)
+        Text(
+            value,
+            style = valueStyle,
+            color = valueColor,
+            modifier = Modifier.padding(horizontal = OnTimeSpacing.lg),
+        )
+        StepArrow(text = "▶", onClick = onNext)
+    }
+}
+
+@Composable
+private fun StepArrow(text: String, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    Box(
+        Modifier
+            .size(OnTimeSizing.minTouchTarget)
+            .background(if (pressed) OnTimeColors.InkWhite.copy(alpha = 0.12f) else Color.Transparent)
+            .border(OnTimeSizing.hairline, OnTimeColors.GoldDim.copy(alpha = 0.4f), RectangleShape)
+            .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(text, style = OnTimeButtonLabel, color = if (pressed) OnTimeColors.Gold else OnTimeColors.InkMuted)
+    }
+}
+
+/** 像素文本输入:静态标签+底亮线(无 M3 label 浮动动画/无指示动画) */
+@Composable
+fun PixelTextField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    minLines: Int = 1,
+) {
+    Column(modifier.fillMaxWidth()) {
+        Text(label, style = OnTimeMetadata, color = OnTimeColors.InkMuted)
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            textStyle = OnTimeBodyLarge.copy(color = OnTimeColors.InkWhite),
+            cursorBrush = SolidColor(OnTimeColors.Gold),
+            minLines = minLines,
+            decorationBox = { inner ->
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = OnTimeSpacing.xs, bottom = OnTimeSpacing.sm)
+                        .border(OnTimeSizing.hairline, OnTimeColors.Gold.copy(alpha = 0.25f))
+                        .padding(OnTimeSpacing.md),
+                ) { inner() }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = OnTimeSpacing.xs),
+        )
+    }
+}
+
+/** 无框静默面(列表行/分组底) */
 @Composable
 fun QuietSurface(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    Box(
-        modifier.background(OnTimeColors.InkWhite.copy(alpha = 0.065f)),
-    ) {
+    Box(modifier.background(OnTimeColors.InkWhite.copy(alpha = 0.05f))) {
         Column(Modifier.padding(OnTimeSpacing.lg)) { content() }
     }
 }
 
-/** 焦点面板:页面中唯一的强调容器(如健康异常/弹层);2dp 金框仅此类与 CTA 允许 */
+/** 焦点面板(全屏金框预算之一) */
 @Composable
 fun FocusPanel(
     modifier: Modifier = Modifier,
@@ -54,55 +239,13 @@ fun FocusPanel(
     Box(
         modifier
             .background(OnTimeColors.DeepBlueHigh.copy(alpha = 0.72f))
-            .border(OnTimeSizing.borderFocused, OnTimeColors.Gold),
+            .border(OnTimeSizing.borderFocused, OnTimeColors.Gold, RectangleShape),
     ) {
         Column(Modifier.padding(OnTimeSpacing.compIntLg)) { content() }
     }
 }
 
-/** 主按钮(像素字+金框):一屏最多一个实心级强调 */
-@Composable
-fun PixelButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    enabled: Boolean = true,
-    content: @Composable RowScope.() -> Unit,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.height(OnTimeSizing.buttonHeight),
-        enabled = enabled,
-        shape = RectangleShape,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = OnTimeColors.DeepBlueHigh.copy(alpha = 0.6f),
-            contentColor = OnTimeColors.Gold,
-        ),
-        border = BorderStroke(OnTimeSizing.borderFocused, OnTimeColors.Gold),
-        content = content,
-    )
-}
-
-/** 次级文字按钮(取消/稍后/删除:弱化,不占框预算) */
-@Composable
-fun QuietButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    text: String,
-    emphasize: Boolean = false,
-) {
-    TextButton(
-        onClick = onClick,
-        modifier = modifier.height(OnTimeSizing.buttonHeight),
-        shape = RectangleShape,
-        colors = ButtonDefaults.textButtonColors(
-            contentColor = if (emphasize) OnTimeColors.Gold else OnTimeColors.InkMuted,
-        ),
-    ) {
-        Text(text, style = OnTimeButtonLabel)
-    }
-}
-
-/** 章节眉标:小号金 label + 右侧 hairline(§27:以空间/线/字分组,不以框分组) */
+/** 章节眉标 */
 @Composable
 fun SectionHeader(label: String, modifier: Modifier = Modifier) {
     Row(
@@ -111,7 +254,7 @@ fun SectionHeader(label: String, modifier: Modifier = Modifier) {
             .padding(bottom = OnTimeSpacing.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label.uppercase(), style = OnTimeEyebrow, color = OnTimeColors.Gold.copy(alpha = 0.8f))
+        Text(label.uppercase(), style = dev.evesis.ontime.ui.theme.OnTimeEyebrow, color = OnTimeColors.Gold.copy(alpha = 0.8f))
         Box(
             Modifier
                 .padding(start = OnTimeSpacing.md)
@@ -120,36 +263,4 @@ fun SectionHeader(label: String, modifier: Modifier = Modifier) {
                 .background(OnTimeColors.Gold.copy(alpha = 0.25f)),
         )
     }
-}
-
-/** 屏幕内容列:统一 gutter+居中+contentMaxWidth(§30;所有 Screen 一律经此) */
-@Composable
-fun OnTimeContentColumn(
-    modifier: Modifier = Modifier,
-    horizontalAlignment: Alignment.Horizontal = Alignment.CenterHorizontally,
-    useExpandedGutter: Boolean = false,
-    content: @Composable () -> Unit,
-) {
-    val gutter = if (useExpandedGutter) OnTimeSpacing.gutterExpanded else OnTimeSpacing.gutter
-    Column(
-        modifier
-            .fillMaxWidth()
-            .padding(horizontal = gutter),
-        horizontalAlignment = horizontalAlignment,
-    ) {
-        Column(
-            Modifier
-                .widthIn(max = dev.evesis.ontime.ui.theme.OnTimeLayout.contentMaxWidth)
-                .fillMaxWidth(),
-            horizontalAlignment = horizontalAlignment,
-        ) {
-            content()
-        }
-    }
-}
-
-/** 内部用:文本行包装(Material 组件兜底样式不再直接暴露给页面) */
-@Composable
-internal fun fallbackBody(text: String) {
-    Text(text, style = MaterialTheme.typography.bodyMedium)
 }

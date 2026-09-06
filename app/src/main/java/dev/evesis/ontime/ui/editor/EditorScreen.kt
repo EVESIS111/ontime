@@ -12,16 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberDatePickerState
-import androidx.compose.material3.rememberTimePickerState
+import dev.evesis.ontime.ui.components.PixelStepper
+import dev.evesis.ontime.ui.components.PixelTextField as KitTextField
+import dev.evesis.ontime.ui.theme.OnTimeRowTime
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.evesis.ontime.ScheduleEngine
@@ -100,12 +94,12 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
             // ── 内容 ─────────────────────────────
             Spacer(Modifier.padding(top = OnTimeSpacing.sectionGapInner + OnTimeSpacing.xxl))
             SectionHeader("内容")
-            PixelTextField(
+            KitTextField(
                 label = "标题", value = state.title,
                 onValueChange = { v -> viewModel.update { it.copy(title = v) } },
             )
             Spacer(Modifier.padding(top = OnTimeSpacing.md))
-            PixelTextField(
+            KitTextField(
                 label = "台词(多句用 | 分隔)", value = state.message, minLines = 2,
                 onValueChange = { v -> viewModel.update { it.copy(message = v) } },
             )
@@ -216,121 +210,55 @@ private fun <T> cycle(list: List<T>, current: T, dir: Int): T {
     return list[Math.floorMod(i + dir, list.size)]
 }
 
-/** 填充式输入(静默底+下边线;取代 v1 金框 OutlinedTextField) */
-@Composable
-private fun PixelTextField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    minLines: Int = 1,
-) {
-    Column {
-        Text(label, style = OnTimeMetadata, color = OnTimeColors.InkMuted)
-        androidx.compose.material3.TextField(
-            value = value, onValueChange = onValueChange,
-            minLines = minLines,
-            textStyle = OnTimeBodyLarge,
-            shape = RectangleShape,
-            colors = androidx.compose.material3.TextFieldDefaults.colors(
-                focusedTextColor = OnTimeColors.InkWhite,
-                unfocusedTextColor = OnTimeColors.InkWhite,
-                focusedContainerColor = OnTimeColors.InkWhite.copy(alpha = 0.06f),
-                unfocusedContainerColor = OnTimeColors.InkWhite.copy(alpha = 0.04f),
-                focusedIndicatorColor = OnTimeColors.Gold,
-                unfocusedIndicatorColor = OnTimeColors.Gold.copy(alpha = 0.25f),
-                cursorColor = OnTimeColors.Gold,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = OnTimeSpacing.xs),
-        )
-    }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimeField(minutes: Int, onPick: (Int) -> Unit) {
-    var showPicker by remember { mutableStateOf(false) }
-    Text(
-        "%02d:%02d".format(minutes / 60, minutes % 60),
-        style = OnTimeHeroTime,
-        color = OnTimeColors.InkWhite,
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { showPicker = true }
-            .padding(vertical = OnTimeSpacing.sm),
-    )
-    if (showPicker) {
-        val tp = rememberTimePickerState(initialHour = minutes / 60, initialMinute = minutes % 60, is24Hour = true)
-        AlertDialog(
-            onDismissRequest = { showPicker = false },
-            confirmButton = {
-                TextButton(onClick = { onPick(tp.hour * 60 + tp.minute); showPicker = false }) {
-                    Text("确定", color = OnTimeColors.Gold)
-                }
-            },
-            dismissButton = { TextButton(onClick = { showPicker = false }) { Text("取消", color = OnTimeColors.InkMuted) } },
-            title = { Text("选择时间", style = OnTimeBody) },
-            text = { TimePicker(state = tp) },
-            containerColor = OnTimeColors.DeepBlueHigh,
-        )
+    val h = minutes / 60
+    val m = minutes % 60
+    Column {
+        Text("时间", style = OnTimeMetadata, color = OnTimeColors.InkMuted)
+        Row(
+            Modifier.fillMaxWidth().padding(top = OnTimeSpacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            StepperNum("%02d".format(h), onPrev = { onPick(((h + 23) % 24) * 60 + m) }, onNext = { onPick(((h + 1) % 24) * 60 + m) })
+            Text(":", style = OnTimeRowTime, color = OnTimeColors.InkMuted)
+            StepperNum("%02d".format(m), onPrev = { onPick(h * 60 + (m + 59) % 60) }, onNext = { onPick(h * 60 + (m + 1) % 60) })
+        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StepperNum(value: String, onPrev: () -> Unit, onNext: () -> Unit) {
+    PixelStepper(label = "", value = value, onPrev = onPrev, onNext = onNext,
+        valueStyle = OnTimeRowTime, valueColor = OnTimeColors.Gold)
+}
+
 @Composable
 private fun DateTimeField(atMillis: Long, onPick: (Long) -> Unit) {
-    var showDate by remember { mutableStateOf(false) }
-    var showTime by remember { mutableStateOf(false) }
-    var pickedDate by remember { mutableStateOf(atMillis) }
     val cal = Calendar.getInstance().apply { timeInMillis = atMillis }
+    val dayLabel = SimpleDateFormat("M月d日", Locale.CHINA).format(Date(atMillis))
     Column {
+        Text("日期", style = OnTimeMetadata, color = OnTimeColors.InkMuted)
         Text(
-            SimpleDateFormat("M月d日", Locale.CHINA).format(Date(atMillis)),
-            style = OnTimeBody, color = OnTimeColors.InkMuted,
-        )
-        Text(
-            SimpleDateFormat("HH:mm", Locale.CHINA).format(Date(atMillis)),
-            style = OnTimeHeroTime,
+            dayLabel,
+            style = OnTimeBodyLarge,
             color = OnTimeColors.InkWhite,
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showDate = true }
-                .padding(vertical = OnTimeSpacing.sm),
+            modifier = Modifier.padding(top = OnTimeSpacing.xs, bottom = OnTimeSpacing.sm),
         )
-    }
-    if (showDate) {
-        val dp = rememberDatePickerState(initialSelectedDateMillis = atMillis)
-        AlertDialog(
-            onDismissRequest = { showDate = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    dp.selectedDateMillis?.let { pickedDate = it + cal.get(Calendar.HOUR_OF_DAY) * 3_600_000L + cal.get(Calendar.MINUTE) * 60_000L }
-                    showDate = false; showTime = true
-                }) { Text("下一步", color = OnTimeColors.Gold) }
-            },
-            dismissButton = { TextButton(onClick = { showDate = false }) { Text("取消", color = OnTimeColors.InkMuted) } },
-            title = { Text("选择日期", style = OnTimeBody) },
-            text = { DatePicker(state = dp) },
-            containerColor = OnTimeColors.DeepBlueHigh,
+        PixelStepper(
+            label = "调整日期",
+            value = "± 1 天",
+            onPrev = { onPick(atMillis - 86_400_000L) },
+            onNext = { onPick(atMillis + 86_400_000L) },
         )
-    }
-    if (showTime) {
-        val tp = rememberTimePickerState(initialHour = cal.get(Calendar.HOUR_OF_DAY), initialMinute = cal.get(Calendar.MINUTE), is24Hour = true)
-        AlertDialog(
-            onDismissRequest = { showTime = false },
-            confirmButton = {
-                TextButton(onClick = {
-                    val c = Calendar.getInstance().apply { timeInMillis = pickedDate }
-                    c.set(Calendar.HOUR_OF_DAY, tp.hour); c.set(Calendar.MINUTE, tp.minute); c.set(Calendar.SECOND, 0)
-                    onPick(c.timeInMillis); showTime = false
-                }) { Text("确定", color = OnTimeColors.Gold) }
-            },
-            dismissButton = { TextButton(onClick = { showTime = false }) { Text("取消", color = OnTimeColors.InkMuted) } },
-            title = { Text("选择时间", style = OnTimeBody) },
-            text = { TimePicker(state = tp) },
-            containerColor = OnTimeColors.DeepBlueHigh,
-        )
+        Spacer(Modifier.padding(top = OnTimeSpacing.md))
+        TimeField(cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)) { hm ->
+            val c = Calendar.getInstance().apply { timeInMillis = atMillis }
+            c.set(Calendar.HOUR_OF_DAY, hm / 60); c.set(Calendar.MINUTE, hm % 60); c.set(Calendar.SECOND, 0)
+            onPick(c.timeInMillis)
+        }
     }
 }
 

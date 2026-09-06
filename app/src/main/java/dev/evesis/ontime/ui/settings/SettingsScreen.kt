@@ -42,7 +42,7 @@ import dev.evesis.ontime.ui.theme.OnTimeTheme
  */
 
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onCatalog: () -> Unit = {}) {
     val context = LocalContext.current
     var imported by remember { mutableStateOf(-1) }
     val versionName = remember {
@@ -114,6 +114,9 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
 
             Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+            SectionHeader("开发")
+            QuietButton(onClick = onCatalog, text = "组件目录 →")
+            Spacer(Modifier.padding(top = OnTimeSpacing.md))
             QuietButton(
                 onClick = onBack,
                 text = "← 返回",

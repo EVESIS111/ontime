@@ -24,6 +24,7 @@ import dev.evesis.ontime.ui.editor.EditorScreen
 import dev.evesis.ontime.ui.editor.EditorViewModel
 import dev.evesis.ontime.ui.home.HomeScreen
 import dev.evesis.ontime.ui.home.HomeViewModel
+import dev.evesis.ontime.ui.catalog.CatalogScreen
 import dev.evesis.ontime.ui.settings.SettingsScreen
 import dev.evesis.ontime.ui.theme.OnTimeTheme
 
@@ -54,7 +55,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             OnTimeTheme {
                 val nav = rememberNavController()
-                NavHost(navController = nav, startDestination = "home") {
+                // Instant Pixel Policy(v11.2):导航零动画——点击即到,返回即回
+                NavHost(
+                    navController = nav,
+                    startDestination = "home",
+                    enterTransition = { androidx.compose.animation.EnterTransition.None },
+                    exitTransition = { androidx.compose.animation.ExitTransition.None },
+                    popEnterTransition = { androidx.compose.animation.EnterTransition.None },
+                    popExitTransition = { androidx.compose.animation.ExitTransition.None },
+                ) {
                     composable("home") {
                         HomeScreen(
                             viewModel = viewModel,
@@ -78,7 +87,10 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     composable("settings") {
-                        SettingsScreen(onBack = { nav.popBackStack() })
+                        SettingsScreen(onBack = { nav.popBackStack() }, onCatalog = { nav.navigate("catalog") })
+                    }
+                    composable("catalog") {
+                        CatalogScreen(onBack = { nav.popBackStack() })
                     }
                 }
             }
