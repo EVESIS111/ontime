@@ -87,7 +87,8 @@ class BootReceiver : BroadcastReceiver() {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_TIME_CHANGED,
-            Intent.ACTION_TIMEZONE_CHANGED -> {
+            Intent.ACTION_TIMEZONE_CHANGED,
+            Intent.ACTION_MY_PACKAGE_REPLACED -> {   // 覆盖安装后系统清除了闹钟,必须自愈重排
                 Alarms.scheduleAll(context)
                 KeepAliveService.start(context)
             }
