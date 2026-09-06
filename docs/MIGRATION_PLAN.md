@@ -13,8 +13,8 @@
 - [x] PHASE5 OnTime Pixel DesignSystem(字体子集 659KB+Token+组件,清晰度 zoom 验收)(Kenney CC0 基底+蓝金语言;建法参照 Backpack/Komposto;组件=成熟交互换皮,先有使用场景再抽象)
 - [x] PHASE6 Home+Alert(Compose 全量:Home 像素版+Alert 迁移+slide-ack 15ms 真机闭环)(开工前各页 Reference Board 落 UI_REFERENCE_MAP.md)→真机截图→用户过目(不可跳过)
 - [x] PHASE7 全量 Compose UI(Editor 四类型表单+Settings+NavHost;UI 建提醒 E2E 触发+免打扰规则验证)(编辑/设置/交互/动效;Window Size Class 适配,禁硬编码 818dp;核心组件 Preview+截图回归)
-- [ ] PHASE8 Room 迁移(schema 导出→Migration→双跑比对→真机验证→才删旧 Db;禁 destructive)
-- [ ] PHASE9 Alarm 架构审计(vs DeskClock/Brutus/reReminder 比较表,只改明确缺陷)
-- [ ] PHASE10 可靠性加固(§42 测试矩阵:Doze/重启/时区/划掉/权限开关)
+- [x] PHASE8 Room 迁移(v3→v4 重建表,真机无损 17ms;fresh+upgrade+自定义数据三路径验证)(schema 导出→Migration→双跑比对→真机验证→才删旧 Db;禁 destructive)
+- [x] PHASE9 Alarm 审计(唯一缺口 PACKAGE_REPLACED 已修并实测;见 ALARM_AUDIT.md)(vs DeskClock/Brutus/reReminder 比较表,只改明确缺陷)
+- [x] PHASE10 可靠性(Alarm Health+权限矩阵+13 项真机矩阵;Doze 长时挂机与划掉列入持续项,见 RELIABILITY_MATRIX.md)(§42 测试矩阵:Doze/重启/时区/划掉/权限开关)
 - [ ] PHASE11 全量回归
 - [ ] PHASE12 release+归档
