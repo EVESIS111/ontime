@@ -40,12 +40,15 @@ fun HomeScreen(
     onSettings: () -> Unit = {},
 ) {
     val state by viewModel.ui.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
     HomeShell(
         reminders = state.reminders,
         onToggle = viewModel::setEnabled,
         onEdit = onEdit,
         onAdd = onAdd,
         onSettings = onSettings,
+        alarmHealth = state.alarmHealth,
+        onFixHealth = { dev.evesis.ontime.data.AlarmHealthProbe.openSettings(context) },
     )
 }
 
@@ -56,6 +59,8 @@ fun HomeShell(
     onEdit: (id: Long) -> Unit = {},
     onAdd: () -> Unit = {},
     onSettings: () -> Unit = {},
+    alarmHealth: dev.evesis.ontime.data.AlarmHealth = dev.evesis.ontime.data.AlarmHealth.HEALTHY,
+    onFixHealth: () -> Unit = {},
 ) {
     Column(
         Modifier
@@ -79,6 +84,18 @@ fun HomeShell(
                 style = MaterialTheme.typography.bodyMedium,
                 color = OnTimeColors.InkMuted,
             )
+            // Alarm Health 克制警示(非弹窗、非红屏;点击即修复)
+            if (alarmHealth != dev.evesis.ontime.data.AlarmHealth.HEALTHY) {
+                Text(
+                    if (alarmHealth == dev.evesis.ontime.data.AlarmHealth.DEGRADED) "⚠ 提醒可能无法准时触发 · 点击修复"
+                    else "⚠ 通知权限缺失,到点看不到提醒 · 点击修复",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = OnTimeColors.Gold,
+                    modifier = Modifier
+                        .padding(top = OnTimeSpacing.xs)
+                        .clickable(onClick = onFixHealth),
+                )
+            }
         }
 
         LazyColumn(

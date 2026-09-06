@@ -38,7 +38,12 @@
             android:exported="false"
             android:foregroundServiceType="dataSync" />
 
-        <receiver android:name=".AlarmReceiver" android:exported="false" />
+        <receiver android:name=".AlarmReceiver" android:exported="false">
+            <intent-filter>
+                <!-- 系统定向发送(受保护广播);权限恢复后立即重排全部提醒为 exact -->
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
 
         <receiver android:name=".BootReceiver" android:exported="true">
             <intent-filter>

@@ -64,6 +64,9 @@ object Alarms {
         try {
             am.setAlarmClock(AlarmManager.AlarmClockInfo(next, show), fireIntent(ctx, r.id))
         } catch (se: SecurityException) {
+            // 可观测性:降级不等于健康,fire_log 留痕(未来排查"为什么迟到"可定位)
+            Db.get(ctx).logFire(r.id, "${r.title}(调度降级)", next, System.currentTimeMillis(), 0,
+                "mode", "fallback-inexact cap=exact-denied")
             try {
                 am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next, fireIntent(ctx, r.id))
             } catch (se2: SecurityException) {

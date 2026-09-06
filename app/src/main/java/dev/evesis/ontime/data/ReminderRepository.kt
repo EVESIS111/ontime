@@ -36,6 +36,8 @@ class ReminderRepository private constructor(ctx: Context) {
         Db.get(appCtx).find(id)?.let { Alarms.scheduleNext(appCtx, it) }
     }
 
+    fun alarmHealth(): AlarmHealth = AlarmHealthProbe.probe(appCtx)
+
     companion object {
         @Volatile private var inst: ReminderRepository? = null
         fun get(ctx: Context): ReminderRepository =

@@ -10,6 +10,12 @@ import android.os.PowerManager
 class AlarmReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
+        // exact alarm 权限被用户(重新)授予 → 全部提醒立即重排为 exact(官方建议与 BOOT 同构)
+        if (intent.action == android.app.AlarmManager.ACTION_SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED) {
+            Alarms.scheduleAll(context)
+            KeepAliveService.refreshNotification(context)
+            return
+        }
         val id = intent.getLongExtra("id", -1L)
         if (id <= 0) return
         val db = Db.get(context)

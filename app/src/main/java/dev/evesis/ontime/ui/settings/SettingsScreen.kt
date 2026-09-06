@@ -50,6 +50,27 @@ fun SettingsScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(bottom = OnTimeSpacing.md),
             )
 
+            // 提醒运行状态(Alarm Health;用户语言,非工程调试面板)
+            PixelPanel(Modifier.fillMaxWidth().padding(bottom = OnTimeSpacing.md)) {
+                val health = dev.evesis.ontime.data.AlarmHealthProbe.probe(context)
+                Text("提醒运行状态", style = MaterialTheme.typography.titleMedium, color = OnTimeColors.Gold)
+                Text(
+                    when (health) {
+                        dev.evesis.ontime.data.AlarmHealth.HEALTHY -> "提醒运行正常"
+                        dev.evesis.ontime.data.AlarmHealth.DEGRADED -> "需要允许「闹钟和提醒」权限,否则提醒可能延迟数分钟"
+                        dev.evesis.ontime.data.AlarmHealth.BROKEN -> "通知权限被关闭,到点将看不到提醒"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (health == dev.evesis.ontime.data.AlarmHealth.HEALTHY) OnTimeColors.InkWhite else OnTimeColors.Gold,
+                )
+                if (health != dev.evesis.ontime.data.AlarmHealth.HEALTHY) {
+                    PixelButton(
+                        onClick = { dev.evesis.ontime.data.AlarmHealthProbe.openSettings(context) },
+                        modifier = Modifier.fillMaxWidth().padding(top = OnTimeSpacing.sm),
+                    ) { Text("去开启", style = MaterialTheme.typography.bodyLarge) }
+                }
+            }
+
             PixelPanel(Modifier.fillMaxWidth().padding(bottom = OnTimeSpacing.md)) {
                 Text("语音包", style = MaterialTheme.typography.titleMedium, color = OnTimeColors.Gold)
                 Text(
