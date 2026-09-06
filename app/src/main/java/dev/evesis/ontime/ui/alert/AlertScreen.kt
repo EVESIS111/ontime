@@ -1,26 +1,31 @@
 package dev.evesis.ontime.ui.alert
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
-import dev.evesis.ontime.ui.components.PixelButton
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.material3.Text
 import dev.evesis.ontime.ui.components.PixelSwipeToConfirm
+import dev.evesis.ontime.ui.components.QuietButton
+import dev.evesis.ontime.ui.theme.OnTimeBodyLarge
 import dev.evesis.ontime.ui.theme.OnTimeColors
+import dev.evesis.ontime.ui.theme.OnTimeHeroTitle
+import dev.evesis.ontime.ui.theme.OnTimeLayout
 import dev.evesis.ontime.ui.theme.OnTimeSpacing
 import dev.evesis.ontime.ui.theme.OnTimeTheme
-import androidx.compose.ui.tooling.preview.Preview
 
-/** 到点提醒页(锁屏/亮屏弹出;行为契约在 AlertActivity,此处纯展示+回调) */
+/*
+ * Alert v2:瞬时情绪场景(§28)——只留 提醒名/台词/滑动确认/稍后;大留白,零装饰框。
+ */
+
 @Composable
 fun AlertScreen(
     title: String,
@@ -33,38 +38,47 @@ fun AlertScreen(
         Modifier
             .fillMaxSize()
             .background(OnTimeColors.DeepBlue)
-            .padding(OnTimeSpacing.xl),
+            .padding(OnTimeSpacing.gutterExpanded),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
     ) {
         Column(
             Modifier
-                .widthIn(max = OnTimeSpacing.contentMaxWidth)
+                .widthIn(max = OnTimeLayout.controlMaxWidth)
                 .fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(title, style = MaterialTheme.typography.displaySmall, color = OnTimeColors.Gold, textAlign = TextAlign.Center)
+            Text(
+                title,
+                style = OnTimeHeroTitle,
+                color = OnTimeColors.Gold,
+                textAlign = TextAlign.Center,
+            )
             Text(
                 message,
-                style = MaterialTheme.typography.titleMedium,
+                style = OnTimeBodyLarge,
                 color = OnTimeColors.InkWhite,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = OnTimeSpacing.md, bottom = OnTimeSpacing.xxl),
+                modifier = Modifier.padding(
+                    top = OnTimeSpacing.lg,
+                    bottom = OnTimeSpacing.sectionGap,
+                ),
             )
             PixelSwipeToConfirm(
                 hint = "滑动确认",
                 onConfirm = onSlideAck,
                 modifier = Modifier.fillMaxWidth(),
             )
-            PixelButton(
+            QuietButton(
                 onClick = onSnooze,
+                text = snoozeLabel,
+                emphasize = false,
                 modifier = Modifier
                     .padding(top = OnTimeSpacing.md)
-                    .fillMaxWidth(),
-            ) {
-                Text(snoozeLabel, style = MaterialTheme.typography.bodyLarge, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
-            }
+                    .align(Alignment.CenterHorizontally),
+            )
         }
+        Spacer(Modifier.padding(bottom = OnTimeSpacing.xxl))
     }
 }
 

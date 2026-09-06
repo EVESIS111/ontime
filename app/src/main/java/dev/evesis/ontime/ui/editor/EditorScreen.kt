@@ -11,17 +11,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerState
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -39,13 +34,21 @@ import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.evesis.ontime.ScheduleEngine
 import dev.evesis.ontime.Sounds
+import dev.evesis.ontime.ui.components.QuietButton
 import dev.evesis.ontime.ui.components.PixelButton
-import dev.evesis.ontime.ui.components.PixelPanel
+import dev.evesis.ontime.ui.components.SectionHeader
+import dev.evesis.ontime.ui.theme.OnTimeBodyLarge
+import dev.evesis.ontime.ui.theme.OnTimeBody
+import dev.evesis.ontime.ui.theme.OnTimeButtonLabel
 import dev.evesis.ontime.ui.theme.OnTimeColors
+import dev.evesis.ontime.ui.theme.OnTimeHeroTime
+import dev.evesis.ontime.ui.theme.OnTimeLayout
+import dev.evesis.ontime.ui.theme.OnTimeMetadata
+import dev.evesis.ontime.ui.theme.OnTimeScreenTitle
+import dev.evesis.ontime.ui.theme.OnTimeSizing
 import dev.evesis.ontime.ui.theme.OnTimeSpacing
 import dev.evesis.ontime.ui.theme.OnTimeTheme
 import java.text.SimpleDateFormat
@@ -53,8 +56,11 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-/** 提醒编辑页(摘要式折叠:按重复类型渐进显示相关字段;v9 信息架构延续) */
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+/*
+ * Editor v2(§26-27):Section 分组=大呼吸;组内紧凑;以眉标+hairline 分组,不以框分组。
+ * 功能契约不变:四重复类型/周多选/窗口/音色音效/稍后/保存/删除。
+ */
+
 @Composable
 fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
     val state by viewModel.ui.collectAsStateWithLifecycle()
@@ -67,134 +73,130 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
             .fillMaxSize()
             .background(OnTimeColors.DeepBlue)
             .verticalScroll(rememberScrollState())
-            .padding(OnTimeSpacing.lg),
+            .padding(
+                top = OnTimeSpacing.xxl,
+                bottom = OnTimeSpacing.gutter,
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(Modifier.widthIn(max = OnTimeSpacing.contentMaxWidth).fillMaxWidth()) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = OnTimeSpacing.xl)) {
+
             Text(
                 if (state.id == 0L) "新提醒" else "编辑提醒",
-                style = MaterialTheme.typography.titleLarge, color = OnTimeColors.Gold,
-                modifier = Modifier.padding(bottom = OnTimeSpacing.md),
+                style = OnTimeScreenTitle, color = OnTimeColors.InkWhite,
             )
 
-            PixelPanel(Modifier.fillMaxWidth().padding(bottom = OnTimeSpacing.md)) {
-                PixelTextField(
-                    value = state.title, onValueChange = { v -> viewModel.update { it.copy(title = v) } },
-                    label = "标题",
-                )
-                Spacer(Modifier.height(OnTimeSpacing.sm))
-                PixelTextField(
-                    value = state.message, onValueChange = { v -> viewModel.update { it.copy(message = v) } },
-                    label = "台词(可多句,用 | 分隔)",
-                    minLines = 2,
-                )
-            }
+            // ── 内容 ─────────────────────────────
+            Spacer(Modifier.padding(top = OnTimeSpacing.sectionGapInner + OnTimeSpacing.xxl))
+            SectionHeader("内容")
+            PixelTextField(
+                label = "标题", value = state.title,
+                onValueChange = { v -> viewModel.update { it.copy(title = v) } },
+            )
+            Spacer(Modifier.padding(top = OnTimeSpacing.md))
+            PixelTextField(
+                label = "台词(多句用 | 分隔)", value = state.message, minLines = 2,
+                onValueChange = { v -> viewModel.update { it.copy(message = v) } },
+            )
 
-            PixelPanel(Modifier.fillMaxWidth().padding(bottom = OnTimeSpacing.md)) {
-                Text("重复", style = MaterialTheme.typography.titleMedium, color = OnTimeColors.Gold)
-                Spacer(Modifier.height(OnTimeSpacing.sm))
-                Row(horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.sm)) {
-                    ScheduleEngine.RepeatType.entries.forEach { t ->
-                        val selected = state.repeatType == t
-                        Text(
-                            t.label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = if (selected) OnTimeColors.DeepBlue else OnTimeColors.Gold,
-                            modifier = Modifier
-                                .background(if (selected) OnTimeColors.Gold else OnTimeColors.DeepBlueHigh.copy(alpha = 0.5f))
-                                .border(2.dp, OnTimeColors.Gold)
-                                .clickable { viewModel.update { it.copy(repeatType = t) } }
-                                .padding(horizontal = OnTimeSpacing.sm, vertical = OnTimeSpacing.xs),
-                        )
-                    }
+            // ── 计划 ─────────────────────────────
+            Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+            SectionHeader("计划")
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.sm),
+                modifier = Modifier.padding(bottom = OnTimeSpacing.lg),
+            ) {
+                ScheduleEngine.RepeatType.entries.forEach { t ->
+                    val selected = state.repeatType == t
+                    Text(
+                        t.label,
+                        style = OnTimeButtonLabel,
+                        color = if (selected) OnTimeColors.DeepBlue else OnTimeColors.Gold,
+                        modifier = Modifier
+                            .background(if (selected) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.05f))
+                            .border(if (selected) OnTimeSizing.borderFocused else OnTimeSizing.hairline, OnTimeColors.Gold.copy(alpha = if (selected) 1f else 0.3f))
+                            .clickable { viewModel.update { it.copy(repeatType = t) } }
+                            .padding(horizontal = OnTimeSpacing.lg, vertical = OnTimeSpacing.sm),
+                    )
                 }
-                Spacer(Modifier.height(OnTimeSpacing.md))
-                when (state.repeatType) {
-                    ScheduleEngine.RepeatType.DAILY, ScheduleEngine.RepeatType.WEEKLY -> {
-                        TimeField(
-                            minutes = state.timeOfDay,
-                            onPick = { m -> viewModel.update { it.copy(timeOfDay = m) } },
-                        )
-                        if (state.repeatType == ScheduleEngine.RepeatType.WEEKLY) {
-                            Spacer(Modifier.height(OnTimeSpacing.md))
-                            WeekPicker(
-                                weekMask = state.weekMask,
-                                onToggle = { bit, on ->
-                                    viewModel.update { it.copy(weekMask = if (on) it.weekMask or bit else it.weekMask and bit.inv()) }
-                                },
-                            )
+            }
+            when (state.repeatType) {
+                ScheduleEngine.RepeatType.DAILY, ScheduleEngine.RepeatType.WEEKLY -> {
+                    TimeField(state.timeOfDay) { m -> viewModel.update { it.copy(timeOfDay = m) } }
+                    if (state.repeatType == ScheduleEngine.RepeatType.WEEKLY) {
+                        Spacer(Modifier.padding(top = OnTimeSpacing.md))
+                        WeekPicker(state.weekMask) { bit, on ->
+                            viewModel.update { it.copy(weekMask = if (on) it.weekMask or bit else it.weekMask and bit.inv()) }
                         }
                     }
-                    ScheduleEngine.RepeatType.INTERVAL -> {
-                        NumberField(
-                            label = "间隔(分钟)", value = state.intervalMinutes,
-                            onChange = { v -> viewModel.update { it.copy(intervalMinutes = v.coerceIn(1, 1440)) } },
-                        )
-                        Spacer(Modifier.height(OnTimeSpacing.sm))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                if (state.windowStart >= 0) "窗口 %02d:%02d-%02d:%02d".format(
+                }
+                ScheduleEngine.RepeatType.INTERVAL -> {
+                    NumberField("间隔(分钟)", state.intervalMinutes) { v -> viewModel.update { it.copy(intervalMinutes = v.coerceIn(1, 1440)) } }
+                    Spacer(Modifier.padding(top = OnTimeSpacing.md))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            if (state.windowStart >= 0)
+                                "只在 %02d:%02d - %02d:%02d".format(
                                     state.windowStart / 60, state.windowStart % 60,
                                     state.windowEnd / 60, state.windowEnd % 60)
-                                else "时间窗口(可选)",
-                                style = MaterialTheme.typography.bodyMedium, color = OnTimeColors.InkMuted,
-                                modifier = Modifier.weight(1f),
-                            )
-                            PixelButton(onClick = {
+                            else "全天任意时段",
+                            style = OnTimeMetadata, color = OnTimeColors.InkMuted,
+                            modifier = Modifier.weight(1f),
+                        )
+                        QuietButton(
+                            onClick = {
                                 viewModel.update {
                                     if (it.windowStart >= 0) it.copy(windowStart = -1, windowEnd = -1)
                                     else it.copy(windowStart = 9 * 60, windowEnd = 21 * 60 + 30)
                                 }
-                            }) { Text(if (state.windowStart >= 0) "清除" else "设置", style = MaterialTheme.typography.bodyMedium) }
-                        }
-                    }
-                    ScheduleEngine.RepeatType.ONCE -> {
-                        DateTimeField(
-                            atMillis = state.atMillis,
-                            onPick = { t -> viewModel.update { it.copy(atMillis = t) } },
+                            },
+                            text = if (state.windowStart >= 0) "清除窗口" else "设窗口",
                         )
                     }
                 }
-            }
-
-            PixelPanel(Modifier.fillMaxWidth().padding(bottom = OnTimeSpacing.md)) {
-                Text("播报", style = MaterialTheme.typography.titleMedium, color = OnTimeColors.Gold)
-                Spacer(Modifier.height(OnTimeSpacing.sm))
-                CyclerField(
-                    label = "音色",
-                    text = state.voiceId.ifEmpty { "跟随系统" },
-                    onPrev = { viewModel.update { it.copy(voiceId = cycle(it.availableVoices, it.voiceId, -1)) } },
-                    onNext = { viewModel.update { it.copy(voiceId = cycle(it.availableVoices, it.voiceId, +1)) } },
-                )
-                Spacer(Modifier.height(OnTimeSpacing.sm))
-                CyclerField(
-                    label = "音效",
-                    text = Sounds.byId(state.soundId).label,
-                    onPrev = { viewModel.update { it.copy(soundId = cycle(Sounds.ALL.map { s -> s.id }, it.soundId, -1)) } },
-                    onNext = { viewModel.update { it.copy(soundId = cycle(Sounds.ALL.map { s -> s.id }, it.soundId, +1)) } },
-                )
-                Spacer(Modifier.height(OnTimeSpacing.sm))
-                NumberField(
-                    label = "稍后提醒(分钟)", value = state.snoozeMinutes,
-                    onChange = { v -> viewModel.update { it.copy(snoozeMinutes = v.coerceIn(1, 60)) } },
-                )
-            }
-
-            Row(horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.md)) {
-                PixelButton(onClick = onDone, modifier = Modifier.weight(1f)) {
-                    Text("取消", style = MaterialTheme.typography.titleMedium)
+                ScheduleEngine.RepeatType.ONCE -> {
+                    DateTimeField(state.atMillis) { t -> viewModel.update { it.copy(atMillis = t) } }
                 }
+            }
+
+            // ── 体验 ─────────────────────────────
+            Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+            SectionHeader("体验")
+            CyclerField(
+                label = "音色",
+                text = state.voiceId.ifEmpty { "跟随系统" },
+                onPrev = { viewModel.update { it.copy(voiceId = cycle(it.availableVoices, it.voiceId, -1)) } },
+                onNext = { viewModel.update { it.copy(voiceId = cycle(it.availableVoices, it.voiceId, +1)) } },
+            )
+            Spacer(Modifier.padding(top = OnTimeSpacing.md))
+            CyclerField(
+                label = "音效",
+                text = Sounds.byId(state.soundId).label,
+                onPrev = { viewModel.update { it.copy(soundId = cycle(Sounds.ALL.map { s -> s.id }, it.soundId, -1)) } },
+                onNext = { viewModel.update { it.copy(soundId = cycle(Sounds.ALL.map { s -> s.id }, it.soundId, +1)) } },
+            )
+
+            // ── 行为 ─────────────────────────────
+            Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+            SectionHeader("行为")
+            NumberField("稍后提醒(分钟)", state.snoozeMinutes) { v -> viewModel.update { it.copy(snoozeMinutes = v.coerceIn(1, 60)) } }
+
+            // ── 操作 ─────────────────────────────
+            Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+            Row(horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.md)) {
+                QuietButton(onClick = onDone, text = "取消", modifier = Modifier.weight(1f))
                 PixelButton(onClick = viewModel::save, modifier = Modifier.weight(2f)) {
-                    Text("保存", style = MaterialTheme.typography.titleMedium)
+                    Text("保存", style = OnTimeButtonLabel)
                 }
             }
             if (state.id > 0) {
-                Spacer(Modifier.height(OnTimeSpacing.md))
-                PixelButton(onClick = viewModel::delete, modifier = Modifier.fillMaxWidth()) {
-                    Text("删除此提醒", style = MaterialTheme.typography.bodyMedium, color = OnTimeColors.VoiceCyan)
-                }
+                QuietButton(
+                    onClick = viewModel::delete,
+                    text = "删除此提醒",
+                    modifier = Modifier.padding(top = OnTimeSpacing.md),
+                )
             }
-            Spacer(Modifier.height(OnTimeSpacing.xl))
+            Spacer(Modifier.padding(top = OnTimeSpacing.xxl))
         }
     }
 }
@@ -213,47 +215,49 @@ private fun <T> cycle(list: List<T>, current: T, dir: Int): T {
     return list[Math.floorMod(i + dir, list.size)]
 }
 
+/** 填充式输入(静默底+下边线;取代 v1 金框 OutlinedTextField) */
 @Composable
 private fun PixelTextField(
+    label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    label: String,
     minLines: Int = 1,
 ) {
-    OutlinedTextField(
-        value = value, onValueChange = onValueChange,
-        label = { Text(label, style = MaterialTheme.typography.bodyMedium) },
-        minLines = minLines,
-        textStyle = MaterialTheme.typography.bodyLarge,
-        shape = RectangleShape,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedTextColor = OnTimeColors.InkWhite,
-            unfocusedTextColor = OnTimeColors.InkWhite,
-            focusedBorderColor = OnTimeColors.Gold,
-            unfocusedBorderColor = OnTimeColors.GoldDim,
-            focusedContainerColor = OnTimeColors.DeepBlueHigh.copy(alpha = 0.5f),
-            unfocusedContainerColor = OnTimeColors.DeepBlueHigh.copy(alpha = 0.3f),
-            focusedLabelColor = OnTimeColors.Gold,
-            unfocusedLabelColor = OnTimeColors.InkMuted,
-            cursorColor = OnTimeColors.Gold,
-        ),
-        modifier = Modifier.fillMaxWidth(),
-    )
+    Column {
+        Text(label, style = OnTimeMetadata, color = OnTimeColors.InkMuted)
+        androidx.compose.material3.TextField(
+            value = value, onValueChange = onValueChange,
+            minLines = minLines,
+            textStyle = OnTimeBodyLarge,
+            shape = RectangleShape,
+            colors = androidx.compose.material3.TextFieldDefaults.colors(
+                focusedTextColor = OnTimeColors.InkWhite,
+                unfocusedTextColor = OnTimeColors.InkWhite,
+                focusedContainerColor = OnTimeColors.InkWhite.copy(alpha = 0.06f),
+                unfocusedContainerColor = OnTimeColors.InkWhite.copy(alpha = 0.04f),
+                focusedIndicatorColor = OnTimeColors.Gold,
+                unfocusedIndicatorColor = OnTimeColors.Gold.copy(alpha = 0.25f),
+                cursorColor = OnTimeColors.Gold,
+            ),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = OnTimeSpacing.xs),
+        )
+    }
 }
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TimeField(minutes: Int, onPick: (Int) -> Unit) {
     var showPicker by remember { mutableStateOf(false) }
     Text(
-        "时间  %02d:%02d".format(minutes / 60, minutes % 60),
-        style = MaterialTheme.typography.titleLarge, color = OnTimeColors.InkWhite,
+        "%02d:%02d".format(minutes / 60, minutes % 60),
+        style = OnTimeHeroTime,
+        color = OnTimeColors.InkWhite,
         modifier = Modifier
             .fillMaxWidth()
-            .background(OnTimeColors.DeepBlueHigh.copy(alpha = 0.5f))
-            .border(2.dp, OnTimeColors.GoldDim)
             .clickable { showPicker = true }
-            .padding(OnTimeSpacing.md),
+            .padding(vertical = OnTimeSpacing.sm),
     )
     if (showPicker) {
         val tp = rememberTimePickerState(initialHour = minutes / 60, initialMinute = minutes % 60, is24Hour = true)
@@ -265,30 +269,35 @@ private fun TimeField(minutes: Int, onPick: (Int) -> Unit) {
                 }
             },
             dismissButton = { TextButton(onClick = { showPicker = false }) { Text("取消", color = OnTimeColors.InkMuted) } },
-            title = { Text("选择时间", color = OnTimeColors.InkWhite) },
+            title = { Text("选择时间", style = OnTimeBody) },
             text = { TimePicker(state = tp) },
             containerColor = OnTimeColors.DeepBlueHigh,
         )
     }
 }
 
-@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DateTimeField(atMillis: Long, onPick: (Long) -> Unit) {
     var showDate by remember { mutableStateOf(false) }
     var showTime by remember { mutableStateOf(false) }
     var pickedDate by remember { mutableStateOf(atMillis) }
     val cal = Calendar.getInstance().apply { timeInMillis = atMillis }
-    Text(
-        "时间  " + SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.CHINA).format(Date(atMillis)),
-        style = MaterialTheme.typography.titleLarge, color = OnTimeColors.InkWhite,
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(OnTimeColors.DeepBlueHigh.copy(alpha = 0.5f))
-            .border(2.dp, OnTimeColors.GoldDim)
-            .clickable { showDate = true }
-            .padding(OnTimeSpacing.md),
-    )
+    Column {
+        Text(
+            SimpleDateFormat("M月d日", Locale.CHINA).format(Date(atMillis)),
+            style = OnTimeBody, color = OnTimeColors.InkMuted,
+        )
+        Text(
+            SimpleDateFormat("HH:mm", Locale.CHINA).format(Date(atMillis)),
+            style = OnTimeHeroTime,
+            color = OnTimeColors.InkWhite,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showDate = true }
+                .padding(vertical = OnTimeSpacing.sm),
+        )
+    }
     if (showDate) {
         val dp = rememberDatePickerState(initialSelectedDateMillis = atMillis)
         AlertDialog(
@@ -300,7 +309,7 @@ private fun DateTimeField(atMillis: Long, onPick: (Long) -> Unit) {
                 }) { Text("下一步", color = OnTimeColors.Gold) }
             },
             dismissButton = { TextButton(onClick = { showDate = false }) { Text("取消", color = OnTimeColors.InkMuted) } },
-            title = { Text("选择日期", color = OnTimeColors.InkWhite) },
+            title = { Text("选择日期", style = OnTimeBody) },
             text = { DatePicker(state = dp) },
             containerColor = OnTimeColors.DeepBlueHigh,
         )
@@ -317,7 +326,7 @@ private fun DateTimeField(atMillis: Long, onPick: (Long) -> Unit) {
                 }) { Text("确定", color = OnTimeColors.Gold) }
             },
             dismissButton = { TextButton(onClick = { showTime = false }) { Text("取消", color = OnTimeColors.InkMuted) } },
-            title = { Text("选择时间", color = OnTimeColors.InkWhite) },
+            title = { Text("选择时间", style = OnTimeBody) },
             text = { TimePicker(state = tp) },
             containerColor = OnTimeColors.DeepBlueHigh,
         )
@@ -327,19 +336,18 @@ private fun DateTimeField(atMillis: Long, onPick: (Long) -> Unit) {
 @Composable
 private fun WeekPicker(weekMask: Int, onToggle: (bit: Int, on: Boolean) -> Unit) {
     val names = listOf("日", "一", "二", "三", "四", "五", "六")
-    Row(horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.xs)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.sm)) {
         names.forEachIndexed { i, name ->
             val bit = 1 shl i
             val on = weekMask and bit != 0
             Text(
                 name,
-                style = MaterialTheme.typography.bodyMedium,
+                style = OnTimeButtonLabel,
                 color = if (on) OnTimeColors.DeepBlue else OnTimeColors.InkMuted,
                 modifier = Modifier
-                    .background(if (on) OnTimeColors.Gold else OnTimeColors.DeepBlueHigh.copy(alpha = 0.5f))
-                    .border(2.dp, if (on) OnTimeColors.Gold else OnTimeColors.GoldDim)
+                    .background(if (on) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.05f))
                     .clickable { onToggle(bit, !on) }
-                    .padding(OnTimeSpacing.sm),
+                    .padding(horizontal = OnTimeSpacing.lg, vertical = OnTimeSpacing.sm),
             )
         }
     }
@@ -348,22 +356,33 @@ private fun WeekPicker(weekMask: Int, onToggle: (bit: Int, on: Boolean) -> Unit)
 @Composable
 private fun NumberField(label: String, value: Int, onChange: (Int) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("$label  ", style = MaterialTheme.typography.bodyMedium, color = OnTimeColors.InkMuted, modifier = Modifier.weight(1f))
-        PixelButton(onClick = { onChange(value - if (value <= 15) 1 else 5) }) { Text("−", style = MaterialTheme.typography.titleMedium) }
+        Text(label, style = OnTimeBody, color = OnTimeColors.InkMuted, modifier = Modifier.weight(1f))
+        QuietButton(onClick = { onChange(value - if (value <= 15) 1 else 5) }, text = "−")
         Text(
             " $value ",
-            style = MaterialTheme.typography.titleLarge, color = OnTimeColors.InkWhite,
+            style = OnTimeBodyLarge, color = OnTimeColors.InkWhite,
         )
-        PixelButton(onClick = { onChange(value + if (value < 15) 1 else 5) }) { Text("+", style = MaterialTheme.typography.titleMedium) }
+        QuietButton(onClick = { onChange(value + if (value < 15) 1 else 5) }, text = "+")
     }
 }
 
 @Composable
 private fun CyclerField(label: String, text: String, onPrev: () -> Unit, onNext: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text("$label", style = MaterialTheme.typography.bodyMedium, color = OnTimeColors.InkMuted, modifier = Modifier.weight(1f))
-        PixelButton(onClick = onPrev) { Text("◀", style = MaterialTheme.typography.bodyMedium) }
-        Text(" $text ", style = MaterialTheme.typography.bodyLarge, color = OnTimeColors.Gold)
-        PixelButton(onClick = onNext) { Text("▶", style = MaterialTheme.typography.bodyMedium) }
+        Text(label, style = OnTimeBody, color = OnTimeColors.InkMuted, modifier = Modifier.weight(1f))
+        QuietButton(onClick = onPrev, text = "◀")
+        Text(" $text ", style = OnTimeBodyLarge, color = OnTimeColors.Gold)
+        QuietButton(onClick = onNext, text = "▶")
+    }
+}
+
+@Preview(name = "Tablet", widthDp = 818, heightDp = 1200)
+@Composable
+private fun EditorSkeletonPreview() {
+    OnTimeTheme {
+        Column(Modifier.background(OnTimeColors.DeepBlue)) {
+            SectionHeader("计划")
+            WeekPicker(0b0111110) { _, _ -> }
+        }
     }
 }
