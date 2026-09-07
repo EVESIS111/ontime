@@ -14,7 +14,6 @@ import dev.evesis.ontime.ui.components.PixelGlyph
 import dev.evesis.ontime.ui.components.PixelIcon
 import androidx.compose.foundation.combinedClickable
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp

@@ -43,7 +43,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import dev.evesis.ontime.ui.theme.OnTimeColors
-import kotlinx.coroutines.launch
 
 /** 像素滑动条:Cell 式进度(每 1/8 一格,离散无插值);划过 90% 立即触发 */
 @Composable

@@ -12,8 +12,8 @@ android {
         applicationId = "dev.evesis.ontime"
         minSdk = 29
         targetSdk = 33
-        versionCode = 6
-        versionName = "11.4"
+        versionCode = 7
+        versionName = "12.0"
     }
 
     buildTypes {

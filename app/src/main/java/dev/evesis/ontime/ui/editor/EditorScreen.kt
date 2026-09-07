@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -33,13 +32,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.evesis.ontime.ScheduleEngine
 import dev.evesis.ontime.Sounds
 import dev.evesis.ontime.ui.components.PixelButton
-import dev.evesis.ontime.ui.components.PixelGlyph
-import dev.evesis.ontime.ui.components.PixelIcon
-import dev.evesis.ontime.ui.components.PixelStepper
 import dev.evesis.ontime.ui.components.PixelTextField
 import dev.evesis.ontime.ui.components.QuietButton
 import dev.evesis.ontime.ui.components.SectionHeader
-import dev.evesis.ontime.ui.theme.OnTimeBody
 import dev.evesis.ontime.ui.theme.OnTimeBodyLarge
 import dev.evesis.ontime.ui.theme.OnTimeButtonLabel
 import dev.evesis.ontime.ui.theme.OnTimeColors

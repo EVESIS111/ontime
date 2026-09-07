@@ -104,7 +104,7 @@ fun SettingsScreen(onBack: () -> Unit, onCatalog: () -> Unit = {}) {
                 color = OnTimeColors.InkWhite,
             )
             Text(
-                "v$versionName · d0da5ea",
+                "v$versionName · $gitSha",
                 style = OnTimeMetadata,
                 color = OnTimeColors.InkMuted,
                 modifier = Modifier.padding(top = OnTimeSpacing.md),
