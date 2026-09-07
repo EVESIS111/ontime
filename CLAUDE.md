@@ -51,3 +51,9 @@ Android Reminder App with Pixel Game Interface——Compose 负责交互/无障�
 - tools/ 放运维工具与离线测试；work/ 放可清理中间文件（不入 Git）；backups/ 放设备备份（新增不入 Git，不自动清理）；artifacts/v12/ 放候选 APK 与校验信息；docs/ 放交接和验收证据。
 - 历史基线只标记适用版本，不改写旧记录。当前状态见 EXECUTION_STATE.md。签名、包名、核心行为和语音资产冻结。
 - 本地验证：JAVA_HOME=~/jdk/Contents/Home ./gradlew testDebugUnitTest lint assembleDebug assembleRelease。
+
+## 12. 实机缺陷修复（本轮用户指令）
+- 用户已反馈真实缺陷并要求全面修复；本轮恢复 DBY2-W00 真机复现、同签名覆盖安装与回归。上一轮“本地阶段不操作设备”仅为上一阶段安排。
+- 先记复现与根因，再修复；删除测试只能使用本轮创建的测试事项，不能删除用户现有提醒。
+- 优先修复删除底层穿透、编辑会话状态污染、试听错路由、Alert 内容未渲染和 UI 状态过期。保留 ScheduleEngine/Alarm 降级/Room schema/语音哈希/fire_log 语义，不重写核心。
+- 证据放 work/v12-fixes/（中间）与 artifacts/v12-fixes/（交付）。新的截图必须来自本次真机，未验收项如实标明。
