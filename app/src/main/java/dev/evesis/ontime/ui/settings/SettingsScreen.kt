@@ -5,6 +5,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +38,7 @@ import dev.evesis.ontime.ui.theme.OnTimeMetadata
 import dev.evesis.ontime.ui.theme.OnTimeColors
 import dev.evesis.ontime.ui.theme.OnTimeScreenTitle
 import dev.evesis.ontime.ui.theme.OnTimeSecondary
+import dev.evesis.ontime.ui.theme.OnTimeLayout
 import dev.evesis.ontime.ui.theme.OnTimeSpacing
 import dev.evesis.ontime.ui.theme.OnTimeTheme
 
@@ -59,15 +61,18 @@ fun SettingsScreen(onBack: () -> Unit, onCatalog: () -> Unit = {}) {
             .fillMaxSize()
             .background(OnTimeColors.DeepBlue)
             .safeDrawingPadding()
-            .verticalScroll(rememberScrollState())
             .padding(
                 top = OnTimeSpacing.xxl,
                 bottom = OnTimeSpacing.gutter,
             ),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = OnTimeSpacing.xl)) {
-            Text("设置", style = OnTimeScreenTitle, color = OnTimeColors.InkWhite)
+        Column(Modifier.widthIn(max = OnTimeLayout.editorMaxWidth).fillMaxSize().padding(horizontal = OnTimeSpacing.xl)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("设置", style = OnTimeScreenTitle, color = OnTimeColors.InkWhite, modifier = Modifier.weight(1f))
+                QuietButton(onClick = onBack, text = "返回")
+            }
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
 
             Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
 
@@ -91,12 +96,17 @@ fun SettingsScreen(onBack: () -> Unit, onCatalog: () -> Unit = {}) {
                     .padding(top = OnTimeSpacing.md),
             ) {
                 Text(
-                    when { imported > 0 -> "已导入 $imported 个"; imported == 0 -> "未找到可导入的语音包"; else -> "导入语音包" },
+                    "导入语音包",
                     style = OnTimeButtonLabel,
                 )
             }
 
             Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+
+            if (imported >= 0) {
+                Text(if (imported > 0) "已导入 $imported 个语音文件" else "未找到可导入的语音包，请检查文件位置和命名。",
+                    style = OnTimeSecondary, color = OnTimeColors.Gold)
+            }
 
             // ── 关于 ──
             SectionHeader("关于")
@@ -122,12 +132,7 @@ fun SettingsScreen(onBack: () -> Unit, onCatalog: () -> Unit = {}) {
             SectionHeader("开发")
             QuietButton(onClick = onCatalog, text = "组件目录 →")
             Spacer(Modifier.padding(top = OnTimeSpacing.md))
-            QuietButton(
-                onClick = onBack,
-                text = "← 返回",
-                emphasize = true,
-                modifier = Modifier.align(Alignment.Start),
-            )
+            }
         }
     }
 }

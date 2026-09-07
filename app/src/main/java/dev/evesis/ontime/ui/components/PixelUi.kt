@@ -10,18 +10,19 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.ui.layout.layout
-import androidx.compose.ui.unit.Constraints
-import kotlin.math.max
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -84,13 +85,8 @@ fun PixelIcon(glyph: PixelGlyph, modifier: Modifier = Modifier, sizeDp: Int = 20
 }
 
 /** OnTimeTouchTarget(v11.3):命中区 ≥48dp,视觉元素居中不变大(视觉/命中分离) */
-fun Modifier.ontimeHitArea(minDp: Int = 48): Modifier = layout { measurable, _ ->
-    val placeable = measurable.measure(Constraints())
-    val min = with(density) { minDp.dp.toPx().toInt() }
-    val w = max(placeable.width, min)
-    val h = max(placeable.height, min)
-    layout(w, h) { placeable.placeRelative((w - placeable.width) / 2, (h - placeable.height) / 2) }
-}
+fun Modifier.ontimeHitArea(minDp: Int = 48): Modifier =
+    this.sizeIn(minWidth = minDp.dp, minHeight = minDp.dp)
 
 /** 像素按钮:正常=金框透明底;按下=金底+内容下沉 1 单位;禁用=暗框。零涟漪零动画。 */
 @Composable
@@ -104,7 +100,7 @@ fun PixelButton(
     val pressed by interaction.collectIsPressedAsState()
     Box(
         modifier
-            .height(OnTimeSizing.buttonHeight)
+            .heightIn(min = OnTimeSizing.buttonHeight)
             .background(if (pressed && enabled) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.05f))
             .border(
                 OnTimeSizing.borderFocused,
@@ -123,10 +119,14 @@ fun PixelButton(
         Row(
             Modifier
                 .offset { IntOffset(0, if (pressed) OnTimeSizing.pixelUnit.roundToPx() else 0) }   // 按压下沉 1 像素单位
-                .padding(horizontal = OnTimeSpacing.xl),
+                .padding(horizontal = OnTimeSpacing.xl, vertical = OnTimeSpacing.sm),
             horizontalArrangement = Arrangement.Center,
-            content = content,
-        )
+        ) {
+            CompositionLocalProvider(LocalContentColor provides
+                if (pressed && enabled) OnTimeColors.DeepBlue else OnTimeColors.Gold) {
+                content()
+            }
+        }
     }
 }
 
@@ -252,9 +252,10 @@ fun PixelTextField(
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
     minLines: Int = 1,
+    placeholder: String = "",
 ) {
     Column(modifier.fillMaxWidth()) {
-        Text(label, style = OnTimeMetadata, color = OnTimeColors.InkMuted)
+        if (label.isNotEmpty()) Text(label, style = OnTimeMetadata, color = OnTimeColors.InkMuted)
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -267,8 +268,14 @@ fun PixelTextField(
                         .fillMaxWidth()
                         .padding(top = OnTimeSpacing.xs, bottom = OnTimeSpacing.sm)
                         .border(OnTimeSizing.hairline, OnTimeColors.Gold.copy(alpha = 0.25f))
-                        .padding(OnTimeSpacing.md),
-                ) { inner() }
+                        .padding(OnTimeSpacing.md)
+                        .heightIn(min = OnTimeSizing.minTouchTarget - OnTimeSpacing.md),
+                ) {
+                    if (value.isEmpty() && placeholder.isNotEmpty()) {
+                        Text(placeholder, style = OnTimeBodyLarge, color = OnTimeColors.InkMuted)
+                    }
+                    inner()
+                }
             },
             modifier = Modifier
                 .fillMaxWidth()

@@ -17,3 +17,6 @@
 
 | 2026-09-07 | v12=12.0/code7；目录保留；先本地验证，设备另约，24h 验收前不打 final tag | 用户实施计划 | 本轮用户指令 |
 | 2026-09-07 | DB 保留脚本入口，统一 .db-wal/.db-shm；SQLite backup 合并临时副本，恢复前备份，完整回读校验 | restore 去掉 .db 导致漏读 WAL；行数相等不能证明恢复一致 | 本地工具审计；Python sqlite3 Connection.backup |
+
+## 2026-09-07 编辑体验样张
+用户反馈字号、对齐和信息组织问题。复用现有 Pixel 组件，按 Scaffold 的固定操作区/滚动正文结构调整编辑页；不引新库。共享触控 Modifier 改用标准 sizeIn 保留父约束。字段分三组，低频设置折叠，编辑删除二次确认。参考与验收范围见 V12_EXPERIENCE_SPEC.md；样张尚待用户视觉验收。

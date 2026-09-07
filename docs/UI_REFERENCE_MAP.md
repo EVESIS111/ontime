@@ -25,3 +25,6 @@
 
 ## 变更记录
 - 2026-09-05 建立(前端 Reference-First 补充指令);参考池许可证全部 GitHub API 实测入 REFERENCES.md。
+
+### v12 编辑体验样张
+Editor / 固定导航与保存、滚动正文 / Android Compose Scaffold 官方文档 / 结构参考，无复制代码 / 保留 Pixel 品牌及原字段契约。表单标签参考 Material text-field 文档的标签与辅助信息分层；触控约束使用 Compose sizeIn。详细链接见 V12_EXPERIENCE_SPEC.md。

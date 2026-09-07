@@ -84,32 +84,32 @@ val OnTimeButtonLabel = TextStyle(
 /** 重要正文(Alert 台词、编辑页当前值) */
 val OnTimeBodyLarge = TextStyle(
     fontFamily = OnTimeSansFont, fontWeight = FontWeight.Medium,
-    fontSize = 18.sp, lineHeight = 30.sp, letterSpacing = 0.4.sp,
+    fontSize = 22.sp, lineHeight = 32.sp, letterSpacing = 0.4.sp,
 )
 /** 常规正文(描述、设置说明) */
 val OnTimeBody = TextStyle(
     fontFamily = OnTimeSansFont, fontWeight = FontWeight.Normal,
-    fontSize = 15.sp, lineHeight = 24.sp, letterSpacing = 0.3.sp,
+    fontSize = 18.sp, lineHeight = 28.sp, letterSpacing = 0.3.sp,
 )
 /** 次要正文(辅助说明,容忍两行以上) */
 val OnTimeSecondary = TextStyle(
     fontFamily = OnTimeSansFont, fontWeight = FontWeight.Normal,
-    fontSize = 13.sp, lineHeight = 21.sp, letterSpacing = 0.3.sp,
+    fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.3.sp,
 )
 /** 行内元数据(下次时间/重复规则) */
 val OnTimeMetadata = TextStyle(
     fontFamily = OnTimeSansFont, fontWeight = FontWeight.Medium,
-    fontSize = 13.sp, lineHeight = 20.sp, letterSpacing = 0.5.sp,
+    fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 0.5.sp,
 )
 /** 章节眉标(小号金色,配 hairline 使用) */
 val OnTimeEyebrow = TextStyle(
     fontFamily = OnTimeSansFont, fontWeight = FontWeight.SemiBold,
-    fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 2.5.sp,  // 全大写风格宽字距
+    fontSize = 16.sp, lineHeight = 24.sp, letterSpacing = 2.5.sp,  // 全大写风格宽字距
 )
 /** Caption(版权/许可/时间戳) */
 val OnTimeCaption = TextStyle(
     fontFamily = OnTimeSansFont, fontWeight = FontWeight.Normal,
-    fontSize = 11.sp, lineHeight = 17.sp, letterSpacing = 0.3.sp,
+    fontSize = 13.sp, lineHeight = 20.sp, letterSpacing = 0.3.sp,
 )
 
 /** M3 Typography 映射(Material 组件内部消费;项目自有代码直接用上面的角色) */
@@ -125,4 +125,10 @@ val OnTimeTypography = Typography(
     labelLarge = OnTimeButtonLabel,
     labelMedium = OnTimeMetadata,
     labelSmall = OnTimeCaption,
+)
+
+/** 表单组标题：正文阅读优先，避免小眉标充当唯一字段标签。 */
+val OnTimeFormLabel = TextStyle(
+    fontFamily = OnTimeSansFont, fontWeight = FontWeight.SemiBold,
+    fontSize = 20.sp, lineHeight = 28.sp, letterSpacing = 0.3.sp,
 )

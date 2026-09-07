@@ -41,6 +41,7 @@ object OnTimeLayout {
     // >=840: expanded(此平板 818dp 视配置/方向在 medium/expanded 间)
 
     /** 单列阅读宽(内容列上限;expanded 居中,两侧留白随窗口增长) */
+    val editorMaxWidth = 760.dp
     val contentMaxWidth = 560.dp
     /** 交互控件最大宽(按钮/滑动条不随屏无限拉宽) */
     val controlMaxWidth = 480.dp
