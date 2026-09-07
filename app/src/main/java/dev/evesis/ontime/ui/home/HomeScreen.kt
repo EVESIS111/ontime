@@ -1,5 +1,12 @@
 package dev.evesis.ontime.ui.home
 
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.height
@@ -32,12 +39,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.border
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
-import dev.evesis.ontime.ui.components.PixelIcon
 import dev.evesis.ontime.ui.components.PixelToggle
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,8 +53,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.evesis.ontime.Reminder
 import dev.evesis.ontime.ScheduleEngine
@@ -87,6 +89,7 @@ fun HomeScreen(
     onSettings: () -> Unit = {},
 ) {
     val state by viewModel.ui.collectAsStateWithLifecycle()
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.refresh() }
     val context = androidx.compose.ui.platform.LocalContext.current
     HomeShell(
         reminders = state.reminders,
@@ -201,8 +204,8 @@ fun HomeShell(
                         verticalAlignment = Alignment.Bottom,
                         modifier = Modifier.padding(top = OnTimeSpacing.xs),
                     ) {
-                        Text(n.title, style = OnTimeSpotlightTitle, color = OnTimeColors.Gold)
-                        Spacer(Modifier.weight(1f))
+                        Text(n.title, style = OnTimeSpotlightTitle, color = OnTimeColors.Gold,
+                            modifier = Modifier.weight(1f).padding(end = OnTimeSpacing.md))
                         Text(
                             "${humanize(n.nextFireAt - now)}后",
                             style = OnTimeSpotlightTitle,
@@ -282,6 +285,7 @@ fun HomeShell(
                 .padding(OnTimeSpacing.xl)
                 .size(OnTimeSizing.fabSize)
                 .background(OnTimeColors.Gold)
+                .semantics { contentDescription = "新增提醒" }
                 .clickable(onClick = onAdd),
             contentAlignment = Alignment.Center,
         ) {
@@ -294,6 +298,7 @@ fun HomeShell(
                 .padding(OnTimeSpacing.xl)
                 .size(OnTimeSizing.fabSize)
                 .background(OnTimeColors.InkWhite.copy(alpha = 0.07f))
+                .semantics { contentDescription = "设置" }
                 .clickable(onClick = onSettings),
             contentAlignment = Alignment.Center,
         ) {
@@ -318,6 +323,9 @@ private fun ScheduleListSection(
     onDeleteOne: (Long) -> Unit = {},
     onLongSelect: (Long) -> Unit = {},
 ) {
+    var openId by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(selecting, reminders.map { it.id }) { openId = null }
+    BackHandler(enabled = !selecting && openId != null) { openId = null }
     if (selecting) {
         // 批量操作条(替换眉标;删除=通栏主操作)
         Row(
@@ -345,12 +353,19 @@ private fun ScheduleListSection(
             modifier = Modifier.padding(top = topGap, bottom = OnTimeSpacing.md),
         )
     }
-    LazyColumn(verticalArrangement = Arrangement.spacedBy(OnTimeSpacing.xxs)) {
+    LazyColumn(
+        contentPadding = PaddingValues(bottom = OnTimeSizing.fabSize + OnTimeSpacing.xl * 2),
+        verticalArrangement = Arrangement.spacedBy(OnTimeSpacing.xxs),
+    ) {
         items(reminders, key = { it.id }) { r ->
             if (selecting) {
                 SelectRow(r, r.id in selectedIds) { onToggleSelect(r.id) }
             } else {
-                SwipeRevealRow(r = r, onEdit = onEdit, onToggle = onToggle, onDelete = onDeleteOne, onLongSelect = onLongSelect)
+                SwipeRevealRow(
+                    r = r, onEdit = onEdit, onToggle = onToggle, onDelete = onDeleteOne,
+                    onLongSelect = onLongSelect, isOpen = openId == r.id,
+                    onOpen = { openId = r.id }, onClose = { if (openId == r.id) openId = null },
+                )
             }
         }
     }
@@ -364,21 +379,24 @@ private fun SwipeRevealRow(
     onToggle: (id: Long, on: Boolean) -> Unit,
     onDelete: (Long) -> Unit,
     onLongSelect: (Long) -> Unit = {},
+    isOpen: Boolean,
+    onOpen: () -> Unit,
+    onClose: () -> Unit,
 ) {
     val density = androidx.compose.ui.platform.LocalDensity.current
     val revealPx = with(density) { 96.dp.toPx() }
     var offsetX by remember(r.id) { mutableFloatStateOf(0f) }
-    val revealed = offsetX < -revealPx / 2f
+    LaunchedEffect(isOpen, revealPx) { offsetX = if (isOpen) -revealPx else 0f }
 
-    Box(Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
-        // 底层:红色删除按钮(右缘 96dp;点击=删除)
-        Box(
+    Box(Modifier.fillMaxWidth().height(IntrinsicSize.Min).clipToBounds()) {
+        // 关闭时不生成删除控件，避免透明穿透与隐藏按钮误触。
+        if (offsetX < 0f) Box(
             Modifier
                 .align(Alignment.CenterEnd)
                 .width(96.dp)
                 .fillMaxHeight()
                 .background(OnTimeColors.Danger)
-                .clickable { onDelete(r.id) },
+                .clickable(enabled = isOpen) { onClose(); onDelete(r.id) },
             contentAlignment = Alignment.Center,
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -394,12 +412,14 @@ private fun SwipeRevealRow(
         Box(
             Modifier
                 .offset { IntOffset(offsetX.roundToInt(), 0) }
-                .pointerInput(revealPx) {
+                .background(OnTimeColors.DeepBlue)
+                .pointerInput(revealPx, isOpen) {
                     detectHorizontalDragGestures(
                         onDragEnd = {
-                            offsetX = if (offsetX < -revealPx / 2f) -revealPx else 0f
+                            if (offsetX < -revealPx / 2f) { offsetX = -revealPx; onOpen() }
+                            else { offsetX = 0f; onClose() }
                         },
-                        onDragCancel = { offsetX = if (offsetX < -revealPx / 2f) -revealPx else 0f },
+                        onDragCancel = { offsetX = if (isOpen) -revealPx else 0f },
                         onHorizontalDrag = { change, amt ->
                             change.consume()
                             offsetX = (offsetX + amt).coerceIn(-revealPx, 0f)
@@ -409,8 +429,8 @@ private fun SwipeRevealRow(
         ) {
             ScheduleRow(
                 r = r,
-                onEdit = { if (revealed) { offsetX = 0f } else onEdit(r.id) },   // 露出时点击=收回
-                onToggle = { on -> onToggle(r.id, on) },
+                onEdit = { if (isOpen || offsetX < 0f) { offsetX = 0f; onClose() } else onEdit(r.id) },   // 露出时点击=收回
+                onToggle = { on -> offsetX = 0f; onClose(); onToggle(r.id, on) },
                 onLongClick = { onLongSelect(r.id) },
             )
         }

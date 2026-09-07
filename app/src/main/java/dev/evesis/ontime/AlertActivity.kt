@@ -9,6 +9,8 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import dev.evesis.ontime.ui.alert.AlertScreen
 import dev.evesis.ontime.ui.theme.OnTimeTheme
+import dev.evesis.ontime.ui.theme.OnTimeAdaptive
+import androidx.compose.runtime.key
 
 /**
  * 到点提醒页(Compose 版)。
@@ -33,6 +35,7 @@ class AlertActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        setIntent(intent)
         AlertPlayer.stop()
         load(intent.getLongExtra("id", -1), intent.getLongExtra("log", -1))
     }
@@ -41,11 +44,13 @@ class AlertActivity : ComponentActivity() {
         reminderId = id; logId = log
         val r = Db.get(this).find(id) ?: run { finish(); return }
 
+        val message = intent.getStringExtra("msg") ?: r.pickMessage()
         setContent {
             OnTimeTheme {
-                AlertScreen(
+                OnTimeAdaptive {
+                key(log) { AlertScreen(
                     title = r.title,
-                    message = r.pickMessage(),
+                    message = message,
                     voiceLabel = if (r.voiceId.isNotEmpty()) "${VoicePacks.displayName(r.voiceId)} 说" else "准时",
                     snoozeLabel = "稍后 ${r.snoozeMinutes} 分钟",
                     onSlideAck = {
@@ -57,12 +62,13 @@ class AlertActivity : ComponentActivity() {
                         Db.get(this).updateLogNote(logId, "snoozed")
                         finish()
                     },
-                )
+                ) }
+                }
             }
         }
 
         Db.get(this).updateLogNote(logId, "ui=shown")
-        AlertPlayer.play(this, r)
+        AlertPlayer.play(this, r, message)
         handler.removeCallbacksAndMessages(null)
         handler.postDelayed({
             Db.get(this).updateLogNote(logId, "timeout")

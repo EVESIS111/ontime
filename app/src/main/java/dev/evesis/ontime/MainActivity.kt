@@ -33,18 +33,13 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private val editorViewModel: EditorViewModel by viewModels {
-        viewModelFactory {
-            initializer { EditorViewModel(ReminderRepository.get(application)) }
-        }
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Channels.ensure(this)
         VoicePacks.installBundled(this)
         Sounds.ensureInstalled(this)
-        Db.get(this).seedDefaultsIfEmpty()
+        val isNewDatabase = !getDatabasePath("ontime.db").exists()
+        if (isNewDatabase) Db.get(this).seedDefaultsIfEmpty()
         Alarms.scheduleAll(this)
         KeepAliveService.start(this)
         requestNotificationPermissionIfNeeded()
@@ -75,6 +70,12 @@ class MainActivity : ComponentActivity() {
                         arguments = listOf(navArgument("id") { type = NavType.LongType }),
                     ) { entry ->
                         val id = entry.arguments?.getLong("id") ?: 0L
+                        val editorViewModel = androidx.lifecycle.viewmodel.compose.viewModel<EditorViewModel>(
+                            viewModelStoreOwner = entry,
+                            factory = viewModelFactory {
+                                initializer { EditorViewModel(ReminderRepository.get(application)) }
+                            },
+                        )
                         EditorScreen(
                             viewModel = editorViewModel,
                             id = id,

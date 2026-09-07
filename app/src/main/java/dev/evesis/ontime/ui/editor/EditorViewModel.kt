@@ -15,6 +15,9 @@ data class EditorUiState(
     val id: Long = 0,                              // 0 = 新建
     val title: String = "",
     val message: String = "",
+    val audioUri: String? = null,
+    val lastFiredAt: Long = 0,
+    val error: String? = null,
     val repeatType: ScheduleEngine.RepeatType = ScheduleEngine.RepeatType.DAILY,
     val timeOfDay: Int = 9 * 60,
     val weekMask: Int = 0b0111110,                 // 默认周一~五
@@ -38,14 +41,19 @@ class EditorViewModel(private val repo: ReminderRepository) : ViewModel() {
 
     fun load(id: Long, ctx: Context) {
         if (_ui.value.loadedId == id) return       // 旋转/重组不覆盖未保存编辑
-        val voices = listOf("") + (VoicePacks.dir(ctx).listFiles()?.map { it.name } ?: emptyList())
+        val voices = listOf("") + (VoicePacks.dir(ctx).listFiles()?.filter { it.isDirectory }?.map { it.name }?.sorted() ?: emptyList())
         val r = if (id > 0) repo.find(id) else null
+        if (id > 0 && r == null) {
+            _ui.value = EditorUiState(loadedId = id, finished = true)
+            return
+        }
         _ui.value = if (r == null) EditorUiState(
             availableVoices = voices,
             atMillis = System.currentTimeMillis() + 60 * 60_000L,
             loadedId = id,
         ) else EditorUiState(
             id = r.id, title = r.title, message = r.message,
+            audioUri = r.audioUri, lastFiredAt = r.lastFiredAt,
             repeatType = r.repeatType, timeOfDay = r.timeOfDay, weekMask = r.weekMask,
             intervalMinutes = r.intervalMinutes, windowStart = r.windowStart, windowEnd = r.windowEnd,
             atMillis = r.atMillis, snoozeMinutes = r.snoozeMinutes,
@@ -56,18 +64,20 @@ class EditorViewModel(private val repo: ReminderRepository) : ViewModel() {
         )
     }
 
-    fun update(transform: (EditorUiState) -> EditorUiState) = _ui.update(transform)
+    fun update(transform: (EditorUiState) -> EditorUiState) = _ui.update { transform(it).copy(error = null) }
 
     fun save() {
         val s = _ui.value
-        if (s.title.isBlank()) return
+        if (s.finished) return
+        val error = s.validationError(System.currentTimeMillis())
+        if (error != null) { _ui.update { it.copy(error = error) }; return }
         val r = Reminder(
             id = s.id, title = s.title.trim(), message = s.message.ifBlank { s.title },
-            audioUri = null, voiceId = s.voiceId, soundId = s.soundId,
+            audioUri = s.audioUri, voiceId = s.voiceId, soundId = s.soundId,
             repeatType = s.repeatType, timeOfDay = s.timeOfDay, weekMask = s.weekMask,
             intervalMinutes = s.intervalMinutes, atMillis = s.atMillis,
             snoozeMinutes = s.snoozeMinutes, enabled = s.enabled,
-            nextFireAt = 0, lastFiredAt = 0,
+            nextFireAt = 0, lastFiredAt = s.lastFiredAt,
             windowStart = s.windowStart, windowEnd = s.windowEnd,
         )
         if (s.id == 0L) repo.insert(r) else repo.update(r)
@@ -79,4 +89,12 @@ class EditorViewModel(private val repo: ReminderRepository) : ViewModel() {
         if (s.id > 0) repo.find(s.id)?.let { repo.delete(it) }
         _ui.update { it.copy(finished = true) }
     }
+}
+
+internal fun EditorUiState.validationError(now: Long): String? = when {
+    title.isBlank() -> "请填写提醒标题"
+    repeatType == ScheduleEngine.RepeatType.WEEKLY && weekMask == 0 -> "请至少选择一天"
+    repeatType == ScheduleEngine.RepeatType.ONCE && atMillis <= now -> "请选择未来的提醒时间"
+    repeatType == ScheduleEngine.RepeatType.INTERVAL && intervalMinutes <= 0 -> "提醒间隔必须大于零"
+    else -> null
 }

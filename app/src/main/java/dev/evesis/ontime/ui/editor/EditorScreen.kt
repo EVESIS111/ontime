@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -63,6 +66,8 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
     var previewMsg by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(id) { viewModel.load(id, context) }
+    DisposableEffect(Unit) { onDispose { PreviewPlayer.stop() } }
+    LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { PreviewPlayer.stop() }
     LaunchedEffect(state.finished) { if (state.finished) onDone() }
 
     Column(
@@ -75,8 +80,8 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
     ) {
         Column(
             Modifier
+                .widthIn(max = 720.dp)          // 先限宽再填充，否则 fillMaxSize 会锁死全屏宽度
                 .fillMaxSize()
-                .widthIn(max = 720.dp)          // §35:横屏稳定单列,不为两栏制造 bug
                 .verticalScroll(rememberScrollState())
                 .padding(
                     top = OnTimeSpacing.xxl,
@@ -115,7 +120,14 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
             // ── 计划 ──
             Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
             SectionHeader("计划")
-            FieldRow("重复") { RepeatSelector(state.repeatType) { t -> viewModel.update { it.copy(repeatType = t) } } }
+            FieldRow("重复") { RepeatSelector(state.repeatType) { t ->
+                viewModel.update {
+                    val now = System.currentTimeMillis()
+                    it.copy(repeatType = t, atMillis =
+                        if (t == ScheduleEngine.RepeatType.ONCE && it.atMillis <= now) now + 60 * 60_000L
+                        else it.atMillis)
+                }
+            } }
             when (state.repeatType) {
                 ScheduleEngine.RepeatType.DAILY, ScheduleEngine.RepeatType.WEEKLY -> {
                     FieldRow("时间") { TimeStepper(state.timeOfDay) { m -> viewModel.update { it.copy(timeOfDay = m) } } }
@@ -159,7 +171,7 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
                     FieldRow("时间") { TimeStepper(minutesFrom(state.atMillis)) { hm ->
                         viewModel.update {
                             val c = Calendar.getInstance().apply { timeInMillis = it.atMillis }
-                            c.set(Calendar.HOUR_OF_DAY, hm / 60); c.set(Calendar.MINUTE, hm % 60); c.set(Calendar.SECOND, 0)
+                            c.set(Calendar.HOUR_OF_DAY, hm / 60); c.set(Calendar.MINUTE, hm % 60); c.set(Calendar.SECOND, 0); c.set(Calendar.MILLISECOND, 0)
                             it.copy(atMillis = c.timeInMillis)
                         }
                     } }
@@ -171,17 +183,17 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
             SectionHeader("体验")
             FieldRow("音色") {
                 OptionSelector(
-                    value = state.voiceId.ifEmpty { "跟随系统" },
+                    value = if (state.voiceId.isEmpty()) "跟随系统" else dev.evesis.ontime.VoicePacks.displayName(state.voiceId),
                     onPrev = { viewModel.update { it.copy(voiceId = cycle(state.availableVoices, state.voiceId, -1)) } },
                     onNext = { viewModel.update { it.copy(voiceId = cycle(state.availableVoices, state.voiceId, +1)) } },
-                ) { togglePreview(state, viewModel, context) { previewMsg = it } }
+                ) { togglePreview(state, context, voice = true) { previewMsg = it } }
             }
             FieldRow("音效") {
                 OptionSelector(
                     value = Sounds.byId(state.soundId).label,
                     onPrev = { viewModel.update { it.copy(soundId = cycle(Sounds.ALL.map { s -> s.id }, state.soundId, -1)) } },
                     onNext = { viewModel.update { it.copy(soundId = cycle(Sounds.ALL.map { s -> s.id }, state.soundId, +1)) } },
-                ) { togglePreview(state, viewModel, context) { previewMsg = it } }
+                ) { togglePreview(state, context, voice = false) { previewMsg = it } }
             }
             previewMsg?.let {
                 Text(it, style = OnTimeSecondary, color = OnTimeColors.Gold,
@@ -200,6 +212,10 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
 
             // ── 保存(唯一;safe bottom)──
             Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
+            state.error?.let {
+                Text(it, style = OnTimeSecondary, color = OnTimeColors.Gold,
+                    modifier = Modifier.padding(bottom = OnTimeSpacing.md))
+            }
             PixelButton(onClick = viewModel::save, modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()) {
@@ -216,13 +232,13 @@ private fun minutesFrom(millis: Long): Int {
 
 private fun togglePreview(
     state: EditorUiState,
-    viewModel: EditorViewModel,
     context: android.content.Context,
+    voice: Boolean,
     onMsg: (String?) -> Unit,
 ) {
     val text = state.message.split('|').firstOrNull()?.trim().orEmpty().ifBlank { state.title }
-    val ok = PreviewPlayer.toggle(context, state.soundId, state.voiceId, text)
-    onMsg(if (ok) null else "试听不可用(该台词无语音文件)")
+    if (voice) PreviewPlayer.toggleVoice(context, state.voiceId, text, onMsg)
+    else PreviewPlayer.toggleSound(context, state.soundId, onMsg)
 }
 
 private fun <T> cycle(list: List<T>, current: T, dir: Int): T {

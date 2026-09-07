@@ -1,5 +1,7 @@
 package dev.evesis.ontime.ui.settings
 
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.safeDrawingPadding
@@ -89,7 +91,7 @@ fun SettingsScreen(onBack: () -> Unit, onCatalog: () -> Unit = {}) {
                     .padding(top = OnTimeSpacing.md),
             ) {
                 Text(
-                    if (imported > 0) "已导入 $imported 个" else "导入语音包",
+                    when { imported > 0 -> "已导入 $imported 个"; imported == 0 -> "未找到可导入的语音包"; else -> "导入语音包" },
                     style = OnTimeButtonLabel,
                 )
             }
@@ -132,7 +134,8 @@ fun SettingsScreen(onBack: () -> Unit, onCatalog: () -> Unit = {}) {
 
 @Composable
 private fun HealthRow(context: Context) {
-    val health = remember { AlarmHealthProbe.probe(context) }
+    var health by remember { mutableStateOf(AlarmHealthProbe.probe(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { health = AlarmHealthProbe.probe(context) }
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,

@@ -1,7 +1,9 @@
 package dev.evesis.ontime.ui.alert
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.safeDrawingPadding
 import dev.evesis.ontime.ui.theme.LocalOnTimeAdaptive
 import androidx.compose.foundation.layout.Arrangement
@@ -41,20 +43,20 @@ fun AlertScreen(
     onSnooze: () -> Unit,
 ) {
     val spec = LocalOnTimeAdaptive.current
-    Row(
+    Box(
         Modifier
             .fillMaxSize()
             .background(OnTimeColors.DeepBlue)
             .safeDrawingPadding()
             .padding(horizontal = spec.gutter),
-        verticalAlignment = Alignment.CenterVertically,
+        contentAlignment = Alignment.Center,
     ) {
-        val pane = @Composable { weight: Float ->
         Column(
             Modifier
-                .weight(1f)
                 .widthIn(max = OnTimeLayout.controlMaxWidth)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(vertical = OnTimeSpacing.xl),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -87,7 +89,6 @@ fun AlertScreen(
                 onConfirm = onSlideAck,
                 modifier = Modifier.fillMaxWidth(),
             )
-            if (!spec.twoPane) {
                 QuietButton(
                     onClick = onSnooze,
                     text = snoozeLabel,
@@ -96,8 +97,6 @@ fun AlertScreen(
                         .padding(top = OnTimeSpacing.md)
                         .align(Alignment.CenterHorizontally),
                 )
-            }
-        }
         }
     }
 }

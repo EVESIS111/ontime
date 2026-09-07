@@ -3,50 +3,100 @@ package dev.evesis.ontime.ui.editor
 import android.content.Context
 import android.media.AudioAttributes
 import android.media.MediaPlayer
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import android.os.Handler
+import android.os.Looper
 import dev.evesis.ontime.Sounds
 import dev.evesis.ontime.VoicePacks
+import java.io.File
+import java.util.Locale
 
-/**
- * 编辑页试听播放器(v11.3 §18-19:Sound/Voice 操作必须有完整反馈)。
- * 独立于 AlertPlayer(提醒播放管线冻结不动);UI 层轻量实现:音效→语音包二级,
- * ▶/■ 即时切换,失败返回 false(内联提示"不可用",不静默)。
- */
+/** Editor-only playback; never route a voice preview through the sound effect. */
 object PreviewPlayer {
     private var mp: MediaPlayer? = null
+    private var tts: TextToSpeech? = null
+    private var source: String? = null
+    private var generation = 0
 
-    fun isPlaying(): Boolean = mp?.isPlaying == true
+    private fun begin(key: String, onMessage: (String?) -> Unit): Boolean {
+        val same = source == key
+        stop()
+        onMessage(null)
+        if (same) return false
+        source = key
+        return true
+    }
 
-    /** 返回 true=开始播放;false=资源不可用(调用方显示内联错误) */
-    fun toggle(ctx: Context, soundId: String, voiceId: String, text: String): Boolean {
-        if (isPlaying()) { stop(); return false }
-        val appCtx = ctx.applicationContext
-        val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build()
-        // 一级:音效文件
-        val sfx = Sounds.fileOf(appCtx, Sounds.byId(soundId))
-        if (sfx != null) {
-            try {
-                val p = MediaPlayer(); p.setAudioAttributes(attrs); p.setDataSource(sfx.absolutePath)
-                p.setOnCompletionListener { stop(); }
-                p.prepare(); mp = p; p.start(); return true
-            } catch (e: Exception) { stop() }
-        }
-        // 二级:语音包该台词文件
-        if (voiceId.isNotEmpty()) {
-            val f = VoicePacks.lookup(appCtx, voiceId, text)
-            if (f != null) {
-                try {
-                    val p = MediaPlayer(); p.setAudioAttributes(attrs); p.setDataSource(f.absolutePath)
-                    p.setOnCompletionListener { stop(); }
-                    p.prepare(); mp = p; p.start(); return true
-                } catch (e: Exception) { stop() }
+    fun toggleSound(ctx: Context, soundId: String, onMessage: (String?) -> Unit) {
+        if (!begin("sound:$soundId", onMessage)) return
+        val file = Sounds.fileOf(ctx.applicationContext, Sounds.byId(soundId))
+        if (file == null) { stop(); onMessage("此音效为静音"); return }
+        playFile(file, onMessage)
+    }
+
+    fun toggleVoice(ctx: Context, voiceId: String, text: String, onMessage: (String?) -> Unit) {
+        if (!begin("voice:$voiceId:$text", onMessage)) return
+        if (text.isBlank()) { stop(); onMessage("请先填写台词或标题"); return }
+        val file = VoicePacks.lookup(ctx.applicationContext, voiceId, text)
+        if (file != null) { playFile(file, onMessage); return }
+        onMessage("该台词使用系统语音")
+        val token = generation
+        tts = TextToSpeech(ctx.applicationContext) { status ->
+            if (token == generation) {
+                val player = tts
+                if (status != TextToSpeech.SUCCESS || player == null) {
+                    stop(); onMessage("系统语音暂不可用")
+                } else {
+                    player.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+                        override fun onStart(utteranceId: String?) {}
+                        override fun onDone(utteranceId: String?) { complete(false) }
+                        @Deprecated("Platform callback")
+                        override fun onError(utteranceId: String?) { complete(true) }
+                        private fun complete(failed: Boolean) {
+                            Handler(Looper.getMainLooper()).post {
+                                if (token == generation) {
+                                    stop()
+                                    if (failed) onMessage("系统语音暂不可用")
+                                }
+                            }
+                        }
+                    })
+                    try {
+                        val language = player.setLanguage(Locale.SIMPLIFIED_CHINESE)
+                        if (language < 0 || player.speak(text, TextToSpeech.QUEUE_FLUSH, null, "preview") == TextToSpeech.ERROR) {
+                            stop(); onMessage("系统语音暂不可用")
+                        }
+                    } catch (e: Exception) { stop(); onMessage("系统语音暂不可用") }
+                }
             }
         }
-        return false
+    }
+
+    private fun playFile(file: File, onMessage: (String?) -> Unit) {
+        val player = MediaPlayer()
+        mp = player
+        try {
+            player.setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).build())
+            player.setDataSource(file.absolutePath)
+            player.setOnPreparedListener { if (mp === it) it.start() }
+            player.setOnCompletionListener { if (mp === it) stop() }
+            player.setOnErrorListener { failed, _, _ ->
+                if (mp === failed) { stop(); onMessage("试听播放失败") }
+                true
+            }
+            player.prepareAsync()
+        } catch (e: Exception) {
+            stop(); onMessage("试听播放失败")
+        }
     }
 
     fun stop() {
-        try { mp?.stop() } catch (e: Exception) { }
+        generation++
         try { mp?.release() } catch (e: Exception) { }
         mp = null
+        try { tts?.stop(); tts?.shutdown() } catch (e: Exception) { }
+        tts = null
+        source = null
     }
 }

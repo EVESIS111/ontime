@@ -20,8 +20,7 @@ object AlarmHealthProbe {
         if (Build.VERSION.SDK_INT >= 31 && !am.canScheduleExactAlarms()) return AlarmHealth.DEGRADED
 
         val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
-        if (Build.VERSION.SDK_INT >= 33 &&
-            !nm.areNotificationsEnabled()) return AlarmHealth.BROKEN
+        if (!nm.areNotificationsEnabled()) return AlarmHealth.BROKEN
 
         return AlarmHealth.HEALTHY
     }
@@ -30,9 +29,14 @@ object AlarmHealthProbe {
     fun openSettings(ctx: Context) {
         try {
             ctx.startActivity(android.content.Intent(
-                android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                android.net.Uri.parse("package:dev.evesis.ontime"),
-            ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+                if (probe(ctx) == AlarmHealth.BROKEN) android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS
+                else if (Build.VERSION.SDK_INT >= 31) android.provider.Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM
+                else android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            ).apply {
+                if (action == android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                    putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, ctx.packageName)
+                else data = android.net.Uri.parse("package:${ctx.packageName}")
+            }.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         } catch (e: Exception) {
             // 个别 ROM 无此授权页 → 回退应用详情页
             try {
