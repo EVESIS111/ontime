@@ -1,10 +1,11 @@
-# EXECUTION_STATE.md — 会话中断后由此继续(保持精简,勿写成流水账)
+# EXECUTION_STATE.md — 会话中断后由此继续
 
-- **Current Phase**: ✅ **UI Visual Redesign Build 完成**(2026-09-06 14:2x,待用户验收)
-- **Mode**: Autonomous Execution
-- **交付物**: release 4.13MB(v11.1 视觉版);归档 /sdcard/OnTime项目/v11/OnTime-v11.1-visual-redesign.apk;截图 docs/screenshots/
-- **本阶段完成**:Reference Board 9 项 → Design System v2(DESIGN_SYSTEM.md)→ 四页重构 → 真机截图迭代 2 轮(行面 6.5%/行距 lg)→ 全功能回归(开关 4→3→4/编辑保存还原/Alert 真触发 6ms+slide-ack)→ Before/After 并排(before-after-home.png)
-- **v11.0 欠账已清**:boot 重启自愈 ✅(设备过夜重启后 4 闹钟+服务自动恢复);过夜真实触发 16ms+pack:daji ✅;装机归档 ✅
-- **待办(recents 划掉测试等低优先)**:见 RELIABILITY_MATRIX.md 待补区
-- **tags**: baseline/v10.3-stable, v11-initial-acceptance;stable HEAD 见 git log
-- **DB 运维铁律**: run-as 只信 databases/;filesDir 资产走 App 导入;WAL 三件套一起动;装 release 后 run-as 失效
+- **当前阶段**：v12 本地收尾进行中；设备另约，未正式定版。
+- **起点**：main / 150023f（v11.5.1 删除交互），旧包 11.4/code6。
+- **范围**：12.0/code7、构建脚印、数据库 WAL 工具修复、精准清理、本地验证。
+- **用户决定**：正式版保留组件目录；本轮不操作设备。
+- **下一步**：离线工具故障测试；Gradle 单测/lint/debug/release；记录候选包与源码提交。
+- **定版门槛**：真机核心链、四页截图/布局、recents、一小时熄屏（记录 idle 状态）、连续 24 小时真实使用；全通过才打 v12.0-final。
+- **历史证据**：v11 结果见 RELIABILITY_MATRIX.md，不替代 v12 验收。
+- **延期**：id11「标题1」待回应；台词扩容、语音管理新界面、KMP/Desktop。
+- **DB 铁律**：禁 uninstall；debug 才能读库；优先修正后的 tools；filesDir 资产仅 App 导入。

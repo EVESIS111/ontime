@@ -28,7 +28,7 @@
 每个核心阶段必须:装 APK→真实创建 Reminder→等真实 AlarmManager 触发→弹窗+音效+语音→slide-ack/snooze→fire_log 证据→下一轮闹钟。禁止用"直接调 Receiver"冒充到点验收。设备:DBY2-W00;测试技巧(保屏/锁竖屏/60s SQL 插桩法)见 `docs/DEVICE_DBY2-W00.md`。
 
 ## 8. 构建与依赖
-JDK17=~/jdk/Contents/Home;Gradle 8.5(/tmp/gradle-8.5,Mac 重启会丢→重下 services.gradle.org;PHASE3 将标准化为 ./gradlew)。依赖只取 stable,版本以官方来源实时查询为准,禁止凭记忆编版本;新增依赖先答"SDK/AndroidX/官方模板能不能解决"。
+JDK17=~/jdk/Contents/Home;Gradle 9.4.1（仓库 ./gradlew），AGP 9.2.1 / Compose plugin 2.3.21；v12 冻结依赖，保留 compose-group-mapping 2.3.21 强制对齐。依赖只取 stable,版本以官方来源实时查询为准,禁止凭记忆编版本;新增依赖先答"SDK/AndroidX/官方模板能不能解决"。
 
 ## 9. UI 方向(Reference-First 前端)
 Android Reminder App with Pixel Game Interface——Compose 负责交互/无障碍/适配,OnTime Pixel Design System 负责外观;禁游戏引擎/WebView UI。视觉基调:Premium Pixel/Retro RPG/克制蓝+金/透明容器/内容居中/安全边距;避免 Material 默认脸/圆角白卡堆/纯黑死背景/大片色块/花哨边框。像素资产禁模糊缩放,必须截图验证整数倍清晰。视觉批量铺开前先出 Home+Alert 真机样张给用户过目。
@@ -42,3 +42,12 @@ Android Reminder App with Pixel Game Interface——Compose 负责交互/无障�
 
 ## 10. 用户沟通
 用户是设计师,中文,结论先行:结论→为什么→体验影响→风险→能否回滚。无网络优先:不加账号/云/Analytics/广告。
+
+## 11. v12 收尾补充规范（2026-09-07）
+- 用户决定先本地实现与验证，设备另约；真机及连续 24 小时日常验收前不建 v12.0-final，不声称定版通过。正式版保留组件目录和有效 Preview。
+- 禁止 adb uninstall，只能同签名 install -r。DB 运维：force-stop→装 debug→tools/backup-device-db.sh→本地副本操作→tools/restore-device-db.sh→装回 release 并核实闹钟自愈。release 禁止 run-as 读库。
+- 备份伴生文件必须命名为 <文件>.db-wal / <文件>.db-shm。恢复先在临时副本合并 WAL 为完整快照，备份设备当前库，再推快照并清空旧 WAL/SHM。传输或完整回读校验失败必须停止，保留恢复路径。
+- 资产只读规则仅增加一项例外：v12 验收通过后允许向 /sdcard/OnTime项目/v12/ 新增归档；同名已存在则停止，不覆盖。
+- tools/ 放运维工具与离线测试；work/ 放可清理中间文件（不入 Git）；backups/ 放设备备份（新增不入 Git，不自动清理）；artifacts/v12/ 放候选 APK 与校验信息；docs/ 放交接和验收证据。
+- 历史基线只标记适用版本，不改写旧记录。当前状态见 EXECUTION_STATE.md。签名、包名、核心行为和语音资产冻结。
+- 本地验证：JAVA_HOME=~/jdk/Contents/Home ./gradlew testDebugUnitTest lint assembleDebug assembleRelease。

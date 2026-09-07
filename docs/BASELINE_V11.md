@@ -1,5 +1,7 @@
 # BASELINE_V11.md — v11 Initial Acceptance 冻结基线(2026-09-06)
 
+> 历史记录，仅描述标题版本，不代表当前源码或 v12 验收；当前状态见 docs/EXECUTION_STATE.md。
+
 > 后续所有 Stable Foundation 改造的回退点。git tag: `v11-initial-acceptance`
 
 ## 构建

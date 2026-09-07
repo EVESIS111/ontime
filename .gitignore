@@ -3,3 +3,7 @@ app/build/
 build/
 local.properties
 .DS_Store
+
+work/
+backups/
+artifacts/v12/

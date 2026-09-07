@@ -21,14 +21,20 @@
 | 12 | fresh install(Room v4) | 建库+种子含 sound_id | 4 种子正确(sound_id 历史 bug 已随 Room 修复) | ✅ |
 | 13 | v3→v4 迁移(真实用户库) | 数据无损 | 4 提醒 16 字段+24 fire_log 逐字段一致 | ✅ |
 
-## 待补(设备重启后 adb 未回连,恢复后执行)
+## v12 待验收（用户要求设备另约）
 | # | 场景 | 方法 |
 |---|---|---|
 | 14 | **设备重启 Boot 恢复** | reboot 后不启动,数闹钟+服务(BootReceiver 代码与 install -r 同路径,风险低) |
 | 15 | 划掉 App(recents) | APP_SWITCH+swipe 后等触发 |
-| 16 | Doze 深度(熄屏 1h+) | 长时挂机(低优先,华为有 KeepAlive) |
+| 16 | Doze 深度(熄屏 1h+) | 至少一小时熄屏，不发送保屏按键；记录 deviceidle，未进入深度 idle 不判 Doze 通过 |
 | 17 | 时区/时间修改 | TIME_SET/TIMEZONE_CHANGED 已注册,行为同 Boot 路径 |
 
 ## 已知非缺陷
 - 通知横幅(灭屏触发、弹窗不在前台):SOP 记载的华为行为,fullScreenIntent 通知为设计兜底
 - WakeLock 不持有:播放窗口=AlertActivity 2min(语音<30s),审计记录取舍
+
+## v12 门槛
+- 已有通过项属 v11 历史证据，不替代 v12 核心链、布局、recents、熄屏及 24 小时真人试用。
+- 旧执行状态记录过夜 Boot 恢复通过，v12 尚未复验。时区/系统时间修改延期，本轮不改平板系统时间。
+- 全天记录初始提醒计划及用户变更，逐条核对 fire_log；不能只数已发生事件便断言没有漏触发。
+- 实际声音、画面及手感需用户验收；无法证明的场景记 UNVERIFIED。

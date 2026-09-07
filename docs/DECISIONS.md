@@ -14,3 +14,6 @@
 | 2026-09-06 | Room 迁移:Reminder 原地升级 Entity(列映射含默认值),Db 门面签名不变内部换 Room,version 3→4 + MIGRATION_3_4 重建表(根因:旧库 PK 无显式 NOT NULL,pragma notnull=0 而 Room 要求 1 → "Pre-packaged invalid schema");allowMainThreadQueries 暂留(数据毫秒级,KMP 化时统一 suspend) | 渐进迁移零调用点改动;官方 Room 2.8.4 stable(KMP-ready);schema 导出 app/schemas | 官方 Room 文档 + 实测 diff 定位 |
 | 2026-09-06 | 语音包恢复事故:uninstall 清 filesDir 抹掉用户 94 个角色语音(daji/diaochan/xiaoqiao/zhaojun/yunyang);从 /sdcard/OnTime项目/语音包产物(只读资产)经 App 自身 importFromDownload 恢复(94/94,pack:daji 命中 17ms 验证);**run-as 直推 filesDir 的文件 App 进程不可见(华为数据视图隔离),语音/资产必须走 App 进程内导入**;补 READ_MEDIA_AUDIO/READ_EXTERNAL_STORAGE 权限(导入功能在 targetSdk 33 本缺权限);Mac 侧双备份 backups/voicepacks | 资产纪律:uninstall 前必须备份 filesDir;run-as 不可用于 filesDir 资产投放 | 实测(09-06 13:0x) |
 | 2026-09-06 | KMP shared module + Desktop Smoke 本阶段 Deferred | 引 KMP 插件+CMP 依赖矩阵+Gradle 结构改造,当前网络(aliyun 间歇不可达)下风险>收益;核心代码已按 shared 边界组织(见 MULTIPLATFORM_READINESS.md),ScheduleEngine/模型/DAO/VM/Token 全部 ready | 指令 §28(阻塞过大先记录) |
+
+| 2026-09-07 | v12=12.0/code7；目录保留；先本地验证，设备另约，24h 验收前不打 final tag | 用户实施计划 | 本轮用户指令 |
+| 2026-09-07 | DB 保留脚本入口，统一 .db-wal/.db-shm；SQLite backup 合并临时副本，恢复前备份，完整回读校验 | restore 去掉 .db 导致漏读 WAL；行数相等不能证明恢复一致 | 本地工具审计；Python sqlite3 Connection.backup |
