@@ -1,51 +1,46 @@
 #!/usr/bin/env bash
-# backup-device-db.sh — 设备数据库安全备份(2026-09-06,依据 Stable Foundation 指令 §19)
-# 教训背景:09-05 曾因 release 包 run-as 静默失败 + 空文件推回,把设备 DB 覆盖为 0 字节。
-# 本脚本固化安全顺序;任何真实 DB 写操作前必须先跑它。
+# Pull the complete stopped DB file set; validate a copy without checkpointing it.
 set -euo pipefail
-
 PKG="dev.evesis.ontime"
 DB="databases/ontime.db"
 ADB="${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}"
 OUT_DIR="${1:-$HOME/Desktop/准时App项目/backups}"
+TOOLS_DIR="$(cd "$(dirname "$0")" && pwd)"
 
-# 1. 设备在线
-"$ADB" get-state >/dev/null 2>&1 || { echo "FAIL: device not connected"; exit 1; }
-
-# 2. 必须是 debug 包(run-as 才可用);release 包上 run-as 会静默失败——历史事故根因
-DBG=$("$ADB" shell dumpsys package "$PKG" 2>/dev/null | grep -c "pkgFlags=.*DEBUGGABLE" || true)
-if [ "$DBG" -eq 0 ]; then
-  echo "FAIL: installed pkg is NOT debuggable — run-as would silently return nothing."
-  echo "      先 adb install -r app/build/outputs/apk/debug/app-debug.apk(同签名,-r 保数据)"
-  exit 1
-fi
-
-# 3. 停 App(避免连接持有/WAL 未落盘),再拉取
-"$ADB" shell am force-stop "$PKG"; sleep 1
-
-TS=$(date +%Y%m%d-%H%M%S)
+"$ADB" get-state >/dev/null
+FLAGS=$("$ADB" shell dumpsys package "$PKG")
+[[ "$FLAGS" =~ pkgFlags=.*DEBUGGABLE ]] || { echo "FAIL: install same-signature debug APK with -r first" >&2; exit 1; }
+"$ADB" shell am force-stop "$PKG"
+sleep 1
+# A successful listing distinguishes missing companions from a transport failure.
+FILES=$("$ADB" shell "run-as $PKG ls databases")
 mkdir -p "$OUT_DIR"
-OUT="$OUT_DIR/ontime-$TS.db"
-
-"$ADB" shell "run-as $PKG cat $DB" > "$OUT"
-SIZE=$(wc -c < "$OUT" | tr -d ' ')
-
-# 4. 拉取结果必须校验(空文件/非 SQLite 头都是失败)
-if [ "$SIZE" -lt 4096 ]; then
-  echo "FAIL: pulled file only $SIZE bytes (suspect run-as failure)"; rm -f "$OUT"; exit 1
-fi
-if [ "$(head -c 15 "$OUT")" != "SQLite format 3" ]; then
-  echo "FAIL: not a SQLite file"; rm -f "$OUT"; exit 1
-fi
-
-# 5. 附带 WAL/SHM(Room 默认 WAL,未 checkpoint 数据在 -wal;restore 按同名后缀配对推回)
-for suffix in "-wal" "-shm"; do
-  if "$ADB" shell "run-as $PKG ls $DB$suffix" >/dev/null 2>&1; then
-    "$ADB" shell "run-as $PKG cat $DB$suffix" > "$OUT$suffix" 2>/dev/null || true
-  fi
+CAPTURE=$(mktemp -d "$OUT_DIR/ontime-$(date +%Y%m%d-%H%M%S)-XXXXXX")
+OUT="$CAPTURE/ontime.db"
+trap 'echo "FAIL: incomplete backup retained at $CAPTURE; do not restore it" >&2' ERR
+pull_file() {
+    local remote="$1" local_path="$2" expected actual remote_name
+    expected=$("$ADB" exec-out run-as "$PKG" wc -c "$remote")
+    read -r expected remote_name <<< "$expected"
+    expected=$(printf '%s' "$expected" | tr -d '\r\n')
+    [[ "$expected" =~ ^[0-9]+$ ]] || return 1
+    "$ADB" exec-out run-as "$PKG" cat "$remote" > "$local_path"
+    actual=$(wc -c < "$local_path" | tr -d ' ')
+    [ "$actual" = "$expected" ] || { echo "FAIL: truncated transfer of $remote" >&2; return 1; }
+}
+pull_file "$DB" "$OUT"
+for suffix in -wal -shm -journal; do
+    if printf '%s\n' "$FILES" | tr -d '\r' | grep -Fxq "ontime.db$suffix"; then
+        pull_file "$DB$suffix" "$OUT$suffix"
+    fi
 done
-
-ROWS=$(sqlite3 "$OUT" "SELECT COUNT(*) FROM reminders;" 2>/dev/null || echo "?")
-SCHEMA=$(sqlite3 "$OUT" "PRAGMA user_version;" 2>/dev/null || echo "?")
-echo "OK: $OUT ($SIZE bytes, reminders=$ROWS, schema=v$SCHEMA)"
-echo "sha256: $(shasum -a 256 "$OUT" | cut -d' ' -f1)"
+python3 "$TOOLS_DIR/db-snapshot.py" "$OUT" "$CAPTURE/validated.db"
+shasum -a 256 "$OUT" > "$CAPTURE/SHA256.txt"
+for suffix in -wal -shm -journal; do
+    if [ -f "$OUT$suffix" ]; then shasum -a 256 "$OUT$suffix" >> "$CAPTURE/SHA256.txt"; fi
+done
+trap - ERR
+echo "OK: $OUT" >&2
+# stdout is the source path for the restore tool's automatic safety backup.
+printf '%s\n' "$OUT"
+echo "App remains stopped; reinstall release with -r and verify alarms after maintenance." >&2

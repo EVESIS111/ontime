@@ -1,42 +1,36 @@
 #!/usr/bin/env bash
-# restore-device-db.sh — 把本地备份安全推回设备(2026-09-06)
-# 安全顺序:校验本地文件 → 装 debug → force-stop → stdin 流式推回(run-as 读不了 /sdbox)→ 回读校验。
+# Normalize DB+WAL locally, back up current device data, restore and compare bytes.
 set -euo pipefail
-
 PKG="dev.evesis.ontime"
 DB="databases/ontime.db"
 ADB="${ADB:-$HOME/Library/Android/sdk/platform-tools/adb}"
-SRC="${1:?用法: restore-device-db.sh <备份.db>}"
-
-[ -f "$SRC" ] || { echo "FAIL: $SRC not found"; exit 1; }
-[ "$(head -c 15 "$SRC")" = "SQLite format 3" ] || { echo "FAIL: $SRC is not SQLite"; exit 1; }
-SIZE=$(wc -c < "$SRC" | tr -d ' ')
-[ "$SIZE" -ge 4096 ] || { echo "FAIL: $SRC only $SIZE bytes"; exit 1; }
-ROWS=$(sqlite3 "$SRC" "SELECT COUNT(*) FROM reminders;" 2>/dev/null || { echo "FAIL: no reminders table"; exit 1; })
-echo "source: $SRC ($SIZE bytes, reminders=$ROWS)"
-
-"$ADB" get-state >/dev/null 2>&1 || { echo "FAIL: device not connected"; exit 1; }
-DBG=$("$ADB" shell dumpsys package "$PKG" 2>/dev/null | grep -c "pkgFlags=.*DEBUGGABLE" || true)
-if [ "$DBG" -eq 0 ]; then
-  echo "FAIL: installed pkg is NOT debuggable;先装 debug 包(同签名 -r 保数据)"; exit 1
-fi
-
-"$ADB" shell am force-stop "$PKG"; sleep 1
-
-# stdin 流式推回(run-as 无 /sdcard 读权限,scoped storage)
-"$ADB" shell "run-as $PKG sh -c 'cat > $DB'" < "$SRC"
-# WAL 安全:Room 默认 WAL,未 checkpoint 的数据在 -wal 里;备份若含伴生文件必须一并推回,
-# 绝不能删(删除会丢 WAL 内未落盘数据)。残留 journal 属 truncate 模式旧库,推回的库自带其一致性状态。
-SRC_BASE="$(basename "$SRC")"
-BACKUP_DIR="$(dirname "$SRC")"
-for suffix in "-wal" "-shm"; do
-    EXTRA="$BACKUP_DIR/${SRC_BASE%.db}${suffix}"
-    [ -f "$EXTRA" ] && "$ADB" shell "run-as $PKG sh -c 'cat > $DB${suffix}'" < "$EXTRA" && echo "pushed $DB${suffix}"
+SRC="${1:?Usage: restore-device-db.sh <backup.db>}"
+TOOLS_DIR="$(cd "$(dirname "$0")" && pwd)"
+WORK=$(mktemp -d "${TMPDIR:-/tmp}/ontime-restore-XXXXXX")
+cleanup() {
+    for name in snapshot.db verify.db checked.db; do
+        for suffix in '' -wal -shm -journal; do rm -f "$WORK/$name$suffix"; done
+    done
+    rm -f "$WORK/sidecar"
+    rmdir "$WORK"
+}
+trap cleanup EXIT
+# No device access or writes until the source is fully validated.
+python3 "$TOOLS_DIR/db-snapshot.py" "$SRC" "$WORK/snapshot.db"
+SAFETY=$("$TOOLS_DIR/backup-device-db.sh" "${ONTIME_BACKUP_DIR:-$TOOLS_DIR/../backups}")
+echo "Safety backup: $SAFETY"
+trap 'echo "FAIL: device restore incomplete; app remains stopped. Safety backup: $SAFETY" >&2' ERR
+"$ADB" shell "run-as $PKG sh -c 'cat > $DB'" < "$WORK/snapshot.db"
+# Snapshot already contains committed WAL data. Empty old journals cannot replay
+# stale pages over it; the pre-restore capture above preserves the original set.
+for suffix in -wal -shm -journal; do
+    "$ADB" shell "run-as $PKG sh -c 'cat > $DB$suffix'" < /dev/null
+    "$ADB" exec-out run-as "$PKG" cat "$DB$suffix" > "$WORK/sidecar"
+    [ ! -s "$WORK/sidecar" ] || { echo "FAIL: stale $suffix remains" >&2; exit 1; }
 done
-
-# 回读校验
-"$ADB" shell "run-as $PKG cat $DB" > /tmp/restore-verify.db
-VROWS=$(sqlite3 /tmp/restore-verify.db "SELECT COUNT(*) FROM reminders;" 2>/dev/null || echo "?")
-[ "$VROWS" = "$ROWS" ] || { echo "FAIL: verify mismatch (device=$VROWS source=$ROWS)"; exit 1; }
-echo "OK: restored and verified ($VROWS reminders)"
-echo "提示:装回 release 用 adb install -r app-release.apk(数据保留)"
+"$ADB" exec-out run-as "$PKG" cat "$DB" > "$WORK/verify.db"
+cmp "$WORK/snapshot.db" "$WORK/verify.db"
+python3 "$TOOLS_DIR/db-snapshot.py" "$WORK/verify.db" "$WORK/checked.db"
+trap - ERR
+echo "OK: restored, byte-for-byte verified, integrity_check passed"
+echo "Reinstall release with adb install -r, then verify alarm recovery."
