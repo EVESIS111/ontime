@@ -26,8 +26,14 @@ class AlarmReceiver : BroadcastReceiver() {
         if (Alarms.inQuietHours(now)) {
             val end = Alarms.quietEndMillis(now)
             val am = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
-            am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, end,
-                Alarms.fireIntent(context, id))
+            try {
+                am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, end,
+                    Alarms.fireIntent(context, id))
+            } catch (se: SecurityException) {
+                // 与正常调度/稍后分支一致，权限撤销不能使免打扰顺延崩溃。
+                am.setWindow(android.app.AlarmManager.RTC_WAKEUP, end, 60_000L,
+                    Alarms.fireIntent(context, id))
+            }
             db.logFire(r.id, "${r.title}(免打扰)", r.nextFireAt, now, 0, "none",
                 "quiet-deferred→" + java.text.SimpleDateFormat("HH:mm",
                     java.util.Locale.CHINA).format(java.util.Date(end)))
