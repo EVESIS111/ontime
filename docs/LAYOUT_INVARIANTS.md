@@ -24,3 +24,6 @@
 
 ## 本轮用户体验调整
 按 V12_EXPERIENCE_SPEC.md 做小范围真机样张：编辑单列 760dp，上下固定操作区，低频项折叠；仍禁止重复字段、重叠、越界和小于48dp触控。视觉验收前不扩大页面重构。
+
+## 2026-09-08 全前端重构覆盖
+按CLAUDE §13与V12_1_FRONTEND_SPEC执行；Editor不再强制单列，expanded横屏采用内容/调度双栏，其余单列。Home/Alert/Settings统一双栏规范；仅一个layoutMode判定，字段不重复，交互48dp规则保持。
