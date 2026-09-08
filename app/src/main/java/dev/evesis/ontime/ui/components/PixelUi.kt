@@ -4,6 +4,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -101,12 +102,7 @@ fun PixelButton(
     Box(
         modifier
             .heightIn(min = OnTimeSizing.buttonHeight)
-            .background(if (pressed && enabled) OnTimeColors.InkWhite else if (enabled) OnTimeColors.Gold else OnTimeColors.DeepBlueHigh)
-            .border(
-                OnTimeSizing.borderFocused,
-                when { !enabled -> OnTimeColors.GoldDim.copy(alpha = 0.4f); pressed -> OnTimeColors.InkWhite; else -> OnTimeColors.Gold },
-                RectangleShape,
-            )
+            .consoleFrame(if (pressed && enabled) OnTimeColors.InkWhite else if (enabled) OnTimeColors.Gold else OnTimeColors.DeepBlueHigh)
             .clickable(
                 interactionSource = interaction,
                 indication = null,          // 无涟漪
@@ -143,11 +139,13 @@ fun QuietButton(
     Box(
         modifier
             .ontimeHitArea()
+            .consoleFrame(if (pressed) OnTimeColors.GoldDim else OnTimeColors.DeepBlueHigh)
             .clickable(interactionSource = interaction, indication = null, role = Role.Button, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text,
+            modifier = Modifier.padding(horizontal = OnTimeSpacing.md, vertical = OnTimeSpacing.sm),
             style = OnTimeButtonLabel,
             color = when {
                 pressed -> OnTimeColors.Gold
@@ -167,30 +165,15 @@ fun PixelToggle(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    Box(
-        modifier
-            .ontimeHitArea()      // hit ≥48dp,视觉/命中分离(v11.3)
-            .size(width = 72.dp, height = 40.dp)
-            .background(if (checked) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.08f))
-            .border(
-                OnTimeSizing.borderFocused,
-                when {
-                    pressed -> OnTimeColors.InkWhite                       // 按下即亮(v11.3 反馈)
-                    checked -> OnTimeColors.InkWhite
-                    else -> OnTimeColors.GoldDim.copy(alpha = 0.5f)
-                },
-                RectangleShape,
-            )
-            .clickable(interactionSource = interaction, indication = null, role = Role.Switch, onClick = { onCheckedChange(!checked) }),
-        contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart,
-    ) {
-        // 滑块方块:开=右+深蓝带孔感,关=左+灰;pressed 时加亮边
-        Box(
-            Modifier
-                .padding(OnTimeSizing.borderFocused)
-                .size(32.dp)
-                .background(if (checked) OnTimeColors.DeepBlue else OnTimeColors.InkMuted),
-        )
+    Box(modifier.ontimeHitArea()
+        .toggleable(value = checked, interactionSource = interaction, indication = null,
+            role = Role.Switch, onValueChange = onCheckedChange), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(width = 56.dp, height = 28.dp)
+            .background(if (checked) OnTimeColors.Gold else OnTimeColors.InkMuted.copy(alpha = 0.3f)),
+            contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart) {
+            Box(Modifier.padding(4.dp).size(20.dp)
+                .background(if (pressed) OnTimeColors.InkWhite else if (checked) OnTimeColors.DeepBlue else OnTimeColors.InkMuted))
+        }
     }
 }
 

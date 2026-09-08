@@ -8,8 +8,11 @@ import androidx.compose.ui.graphics.Color
 
 // OnTime 色板 v0(方向:深蓝星空 + 克制金;完整 Design Token 于 PHASE5 落地)
 object OnTimeColors {
-    val DeepBlue = Color(0xFF101923)      // 主背景:非纯黑的深蓝
-    val DeepBlueHigh = Color(0xFF1A2735)  // 层次提升面
+    val ConsoleBody = Color(0xFF34465C)
+    val ConsoleEdge = Color(0xFF71869F)
+    val ConsoleShadow = Color(0xFF080F1D)
+    val DeepBlue = Color(0xFF111D31)      // 主背景:非纯黑的深蓝
+    val DeepBlueHigh = Color(0xFF1B2B43)  // 层次提升面
     val Gold = Color(0xFFEAC77A)          // 金色强调:细线/开关/关键数字
     val GoldDim = Color(0xFF9A8551)       // 金的弱化(禁用/辅助)
     val InkWhite = Color(0xFFEDE6D6)      // 暖白正文(非纯白)

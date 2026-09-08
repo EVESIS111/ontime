@@ -68,7 +68,7 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
     WorkspacePage(if (state.id == 0L) "新建提醒" else "编辑提醒", "写下要做的事，安排时间与声音",
         modifier = Modifier.imePadding(), actions = { QuietButton(onClick = onDone, text = "取消") }) {
         WorkspaceColumns(Modifier.weight(1f), leading = {
-            WorkspacePanel("提醒内容", "标题用于显示，台词用于到点播报") {
+            WorkspacePanel("提醒内容") {
             FieldRow("标题") {
                 PixelTextField(label = "", value = state.title, placeholder = "例如：喝水、出门、学英语",
                     onValueChange = { v -> viewModel.update { it.copy(title = v) } })
@@ -78,10 +78,7 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
                     onValueChange = { v -> viewModel.update { it.copy(message = v) } })
             }
 
-            }
-            Spacer(Modifier.padding(top = OnTimeSpacing.xl))
-            WorkspacePanel("角色声音", "选择陪你记住这件事的声音") {
-            FieldRow("音色") {
+            FieldRow("角色声音") {
                 OptionSelector(
                     value = if (state.voiceId.isEmpty()) "跟随系统" else dev.evesis.ontime.VoicePacks.displayName(state.voiceId),
                     options = state.availableVoices.map { it to if (it.isEmpty()) "跟随系统" else dev.evesis.ontime.VoicePacks.displayName(it) },
@@ -232,12 +229,18 @@ private fun FieldRow(label: String, content: @Composable () -> Unit) {
 @Composable
 private fun TimeStepper(minutes: Int, onPick: (Int) -> Unit) {
     val context = LocalContext.current
-    PixelButton(onClick = {
-        android.app.TimePickerDialog(context, dev.evesis.ontime.R.style.OnTimeDialog, { _, hour, minute -> onPick(hour * 60 + minute) },
-            minutes / 60, minutes % 60, true).show()
-    }, modifier = Modifier.fillMaxWidth()) {
-        Text("%02d:%02d  ·  选择时间".format(minutes / 60, minutes % 60), style = OnTimeBodyLarge)
-    }
+    QuietButton(onClick = {
+        val themed = android.view.ContextThemeWrapper(context, dev.evesis.ontime.R.style.OnTimeDialog)
+        val picker = android.widget.TimePicker(themed).apply {
+            setIs24HourView(true); hour = minutes / 60; minute = minutes % 60
+        }
+        android.app.AlertDialog.Builder(themed).setTitle("选择时间").setView(picker)
+            .setNegativeButton("取消", null)
+            .setPositiveButton("确定") { _, _ ->
+                picker.clearFocus()
+                onPick(picker.hour * 60 + picker.minute)
+            }.show()
+    }, modifier = Modifier.fillMaxWidth(), text = "%02d:%02d  ·  选择时间".format(minutes / 60, minutes % 60), emphasize = true)
 }
 
 /** Numeric entry avoids repeated taps for interval and snooze duration. */
@@ -319,15 +322,15 @@ private fun OptionSelector(
     onPreview: () -> Unit,
 ) {
     val context = LocalContext.current
-    Column(Modifier.fillMaxWidth()) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         QuietButton(onClick = {
             android.app.AlertDialog.Builder(context, dev.evesis.ontime.R.style.OnTimeDialog)
                 .setTitle("选择声音")
                 .setSingleChoiceItems(options.map { it.second }.toTypedArray(), options.indexOfFirst { it.first == currentId }) { dialog, index ->
                     PreviewPlayer.stop(); onPick(options[index].first); dialog.dismiss()
                 }.setNegativeButton("取消", null).show()
-        }, text = "$value  ·  更换", modifier = Modifier.fillMaxWidth(), emphasize = true)
-        QuietButton(onClick = onPreview, text = "试听 / 停止", modifier = Modifier.fillMaxWidth())
+        }, text = "$value  ·  更换", modifier = Modifier.weight(1f), emphasize = true)
+        QuietButton(onClick = onPreview, text = "试听 / 停止", modifier = Modifier.padding(start = OnTimeSpacing.lg))
     }
 }
 
