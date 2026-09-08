@@ -1,5 +1,10 @@
 package dev.evesis.ontime.ui.editor
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import dev.evesis.ontime.ui.components.WorkspacePage
+import dev.evesis.ontime.ui.components.WorkspacePanel
+import dev.evesis.ontime.ui.components.WorkspaceColumns
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -7,27 +12,20 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.Lifecycle
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -44,10 +42,6 @@ import dev.evesis.ontime.ui.theme.OnTimeBodyLarge
 import dev.evesis.ontime.ui.theme.OnTimeButtonLabel
 import dev.evesis.ontime.ui.theme.OnTimeColors
 import dev.evesis.ontime.ui.theme.OnTimeFormLabel
-import dev.evesis.ontime.ui.theme.OnTimeLayout
-import dev.evesis.ontime.ui.theme.OnTimeMetadata
-import dev.evesis.ontime.ui.theme.OnTimeRowTime
-import dev.evesis.ontime.ui.theme.OnTimeScreenTitle
 import dev.evesis.ontime.ui.theme.OnTimeSecondary
 import dev.evesis.ontime.ui.theme.OnTimeSpacing
 import dev.evesis.ontime.ui.theme.OnTimeTheme
@@ -71,28 +65,10 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
     LifecycleEventEffect(Lifecycle.Event.ON_PAUSE) { PreviewPlayer.stop() }
     LaunchedEffect(state.finished) { if (state.finished) onDone() }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(OnTimeColors.DeepBlue)
-            .safeDrawingPadding()
-            .imePadding(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Column(Modifier.widthIn(max = OnTimeLayout.editorMaxWidth).fillMaxSize()
-            .padding(horizontal = OnTimeSpacing.xl)) {
-            Row(Modifier.fillMaxWidth().padding(vertical = OnTimeSpacing.sm),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(if (state.id == 0L) "新建提醒" else "编辑提醒",
-                    style = OnTimeScreenTitle, color = OnTimeColors.InkWhite,
-                    modifier = Modifier.weight(1f))
-                QuietButton(onClick = onDone, text = "取消")
-            }
-            Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
-            // ── 内容 ──
-            Spacer(Modifier.padding(top = OnTimeSpacing.xl))
-            SectionHeader("01  提醒什么")
+    WorkspacePage(if (state.id == 0L) "新建提醒" else "编辑提醒", "写下要做的事，安排时间与声音",
+        modifier = Modifier.imePadding(), actions = { QuietButton(onClick = onDone, text = "取消") }) {
+        WorkspaceColumns(Modifier.weight(1f), leading = {
+            WorkspacePanel("提醒内容", "标题用于显示，台词用于到点播报") {
             FieldRow("标题") {
                 PixelTextField(label = "", value = state.title, placeholder = "例如：喝水、出门、学英语",
                     onValueChange = { v -> viewModel.update { it.copy(title = v) } })
@@ -102,9 +78,21 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
                     onValueChange = { v -> viewModel.update { it.copy(message = v) } })
             }
 
-            // ── 计划 ──
+            }
             Spacer(Modifier.padding(top = OnTimeSpacing.xl))
-            SectionHeader("02  什么时候")
+            WorkspacePanel("角色声音", "选择陪你记住这件事的声音") {
+            FieldRow("音色") {
+                OptionSelector(
+                    value = if (state.voiceId.isEmpty()) "跟随系统" else dev.evesis.ontime.VoicePacks.displayName(state.voiceId),
+                    options = state.availableVoices.map { it to if (it.isEmpty()) "跟随系统" else dev.evesis.ontime.VoicePacks.displayName(it) },
+                    currentId = state.voiceId,
+                    onPick = { value -> viewModel.update { it.copy(voiceId = value) } },
+                ) { togglePreview(state, context, voice = true) { previewMsg = it } }
+            }
+            previewMsg?.let { Text(it, style = OnTimeSecondary, color = OnTimeColors.Gold) }
+            }
+        }, trailing = {
+            WorkspacePanel("时间安排") {
             FieldRow("重复") { RepeatSelector(state.repeatType) { t ->
                 viewModel.update {
                     val now = System.currentTimeMillis()
@@ -124,9 +112,7 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
                 }
                 ScheduleEngine.RepeatType.INTERVAL -> {
                     FieldRow("间隔(分钟)") {
-                        ValueStepper(value = "${state.intervalMinutes}",
-                            onPrev = { viewModel.update { it.copy(intervalMinutes = (it.intervalMinutes - if (it.intervalMinutes <= 15) 1 else 5).coerceIn(1, 1440)) } },
-                            onNext = { viewModel.update { it.copy(intervalMinutes = (it.intervalMinutes + if (it.intervalMinutes < 15) 1 else 5).coerceIn(1, 1440)) } })
+                        NumberEntry(state.intervalMinutes, 1..1440) { value -> viewModel.update { it.copy(intervalMinutes = value) } }
                     }
                     FieldRow("时间窗口") {
                         QuietButton(
@@ -140,18 +126,29 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
                                 "%02d:%02d - %02d:%02d ✓".format(
                                     state.windowStart / 60, state.windowStart % 60,
                                     state.windowEnd / 60, state.windowEnd % 60)
-                            else "全天任意时段",
+                            else "全天任意时段 · 点击限定时段",
                             emphasize = state.windowStart >= 0,
                         )
+                        if (state.windowStart >= 0) {
+                            Text("开始时间", style = OnTimeSecondary, color = OnTimeColors.InkMuted)
+                            TimeStepper(state.windowStart) { value -> viewModel.update { it.copy(windowStart = value) } }
+                            Text("结束时间", style = OnTimeSecondary, color = OnTimeColors.InkMuted)
+                            TimeStepper(state.windowEnd) { value -> viewModel.update { it.copy(windowEnd = value) } }
+                        }
                     }
                 }
                 ScheduleEngine.RepeatType.ONCE -> {
                     FieldRow("日期") {
-                        ValueStepper(
-                            value = SimpleDateFormat("M月d日", Locale.CHINA).format(Date(state.atMillis)),
-                            big = false,
-                            onPrev = { viewModel.update { it.copy(atMillis = it.atMillis - 86_400_000L) } },
-                            onNext = { viewModel.update { it.copy(atMillis = it.atMillis + 86_400_000L) } })
+                        QuietButton(onClick = {
+                            val date = Calendar.getInstance().apply { timeInMillis = state.atMillis }
+                            android.app.DatePickerDialog(context, dev.evesis.ontime.R.style.OnTimeDialog, { _, year, month, day ->
+                                viewModel.update {
+                                    val chosen = Calendar.getInstance().apply { timeInMillis = it.atMillis
+                                        set(Calendar.YEAR, year); set(Calendar.MONTH, month); set(Calendar.DAY_OF_MONTH, day) }
+                                    it.copy(atMillis = chosen.timeInMillis)
+                                }
+                            }, date.get(Calendar.YEAR), date.get(Calendar.MONTH), date.get(Calendar.DAY_OF_MONTH)).show()
+                        }, text = SimpleDateFormat("yyyy年M月d日 · 选择日期", Locale.CHINA).format(Date(state.atMillis)))
                     }
                     FieldRow("时间") { TimeStepper(minutesFrom(state.atMillis)) { hm ->
                         viewModel.update {
@@ -163,32 +160,21 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
                 }
             }
 
-            // ── 体验(唯一 OptionSelector;试听内联)──
-            Spacer(Modifier.padding(top = OnTimeSpacing.xl))
-            SectionHeader("03  用什么声音")
-            FieldRow("音色") {
-                OptionSelector(
-                    value = if (state.voiceId.isEmpty()) "跟随系统" else dev.evesis.ontime.VoicePacks.displayName(state.voiceId),
-                    onPrev = { viewModel.update { it.copy(voiceId = cycle(state.availableVoices, state.voiceId, -1)) } },
-                    onNext = { viewModel.update { it.copy(voiceId = cycle(state.availableVoices, state.voiceId, +1)) } },
-                ) { togglePreview(state, context, voice = true) { previewMsg = it } }
             }
-            previewMsg?.let { Text(it, style = OnTimeSecondary, color = OnTimeColors.Gold) }
+            Spacer(Modifier.padding(top = OnTimeSpacing.xl))
+            WorkspacePanel("其他选项", "音效、稍后提醒与删除") {
             QuietButton(onClick = { advanced = !advanced; confirmDelete = false },
                 text = if (advanced) "收起更多设置 ▴" else "更多设置 ▾", modifier = Modifier.fillMaxWidth())
             if (advanced) {
             FieldRow("提醒前的音效") {
                 OptionSelector(
                     value = Sounds.byId(state.soundId).label,
-                    onPrev = { viewModel.update { it.copy(soundId = cycle(Sounds.ALL.map { s -> s.id }, state.soundId, -1)) } },
-                    onNext = { viewModel.update { it.copy(soundId = cycle(Sounds.ALL.map { s -> s.id }, state.soundId, +1)) } },
+                    options = Sounds.ALL.map { it.id to it.label }, currentId = state.soundId,
+                    onPick = { value -> viewModel.update { it.copy(soundId = value) } },
                 ) { togglePreview(state, context, voice = false) { previewMsg = it } }
             }
             FieldRow("稍后提醒(分钟)") {
-                ValueStepper(value = "${state.snoozeMinutes}",
-                    big = false,
-                    onPrev = { viewModel.update { it.copy(snoozeMinutes = (it.snoozeMinutes - if (it.snoozeMinutes <= 15) 1 else 5).coerceIn(1, 60)) } },
-                    onNext = { viewModel.update { it.copy(snoozeMinutes = (it.snoozeMinutes + if (it.snoozeMinutes < 15) 1 else 5).coerceIn(1, 60)) } })
+                NumberEntry(state.snoozeMinutes, 1..60) { value -> viewModel.update { it.copy(snoozeMinutes = value) } }
             }
 
             if (state.id > 0) {
@@ -201,17 +187,15 @@ fun EditorScreen(viewModel: EditorViewModel, id: Long, onDone: () -> Unit) {
                 } else QuietButton(onClick = { confirmDelete = true }, text = "删除这条提醒")
             }
             }
-            Spacer(Modifier.padding(bottom = OnTimeSpacing.xl))
             }
-            Column(Modifier.fillMaxWidth().padding(vertical = OnTimeSpacing.md)) {
-            state.error?.let {
-                Text(it, style = OnTimeSecondary, color = OnTimeColors.Gold,
-                    modifier = Modifier.padding(bottom = OnTimeSpacing.md))
-            }
-            PixelButton(onClick = viewModel::save, modifier = Modifier
-                .fillMaxWidth()) {
+        })
+        Row(Modifier.fillMaxWidth().padding(top = OnTimeSpacing.lg), verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.xl)) {
+            Text(state.error ?: "保存后将按此计划提醒", style = OnTimeSecondary,
+                color = if (state.error == null) OnTimeColors.InkMuted else OnTimeColors.Gold,
+                modifier = Modifier.weight(1f))
+            PixelButton(onClick = viewModel::save) {
                 Text(if (state.id == 0L) "创建提醒" else "保存修改", style = OnTimeButtonLabel)
-            }
             }
         }
     }
@@ -233,12 +217,6 @@ private fun togglePreview(
     else PreviewPlayer.toggleSound(context, state.soundId, onMsg)
 }
 
-private fun <T> cycle(list: List<T>, current: T, dir: Int): T {
-    if (list.isEmpty()) return current
-    val i = list.indexOf(current).let { if (it < 0) 0 else it }
-    return list[Math.floorMod(i + dir, list.size)]
-}
-
 /** 标签与控件同一左边界。 */
 @Composable
 private fun FieldRow(label: String, content: @Composable () -> Unit) {
@@ -253,43 +231,36 @@ private fun FieldRow(label: String, content: @Composable () -> Unit) {
 /** 时、分独立等宽分组，数字与各自操作对应。 */
 @Composable
 private fun TimeStepper(minutes: Int, onPick: (Int) -> Unit) {
-    val h = minutes / 60
-    val m = minutes % 60
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.md)) {
-        StepperGroup(Modifier.weight(1f), "%02d 时".format(h),
-            onPrev = { onPick(((h + 23) % 24) * 60 + m) }, onNext = { onPick(((h + 1) % 24) * 60 + m) })
-        StepperGroup(Modifier.weight(1f), "%02d 分".format(m),
-            onPrev = { onPick(h * 60 + (m + 59) % 60) }, onNext = { onPick(h * 60 + (m + 1) % 60) })
+    val context = LocalContext.current
+    PixelButton(onClick = {
+        android.app.TimePickerDialog(context, dev.evesis.ontime.R.style.OnTimeDialog, { _, hour, minute -> onPick(hour * 60 + minute) },
+            minutes / 60, minutes % 60, true).show()
+    }, modifier = Modifier.fillMaxWidth()) {
+        Text("%02d:%02d  ·  选择时间".format(minutes / 60, minutes % 60), style = OnTimeBodyLarge)
     }
 }
 
+/** Numeric entry avoids repeated taps for interval and snooze duration. */
 @Composable
-private fun StepperGroup(modifier: Modifier = Modifier, label: String, onPrev: () -> Unit, onNext: () -> Unit) {
-    Column(modifier.background(OnTimeColors.InkWhite.copy(alpha = 0.05f)), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, style = OnTimeBodyLarge, color = OnTimeColors.Gold,
-            modifier = Modifier.padding(top = OnTimeSpacing.sm))
-        Row(Modifier.fillMaxWidth()) {
-            QuietButton(onClick = onPrev, text = "−", modifier = Modifier.weight(1f))
-            QuietButton(onClick = onNext, text = "+", modifier = Modifier.weight(1f))
+private fun NumberEntry(value: Int, range: IntRange, onPick: (Int) -> Unit) {
+    val context = LocalContext.current
+    QuietButton(onClick = {
+        val dialogContext = android.view.ContextThemeWrapper(context, dev.evesis.ontime.R.style.OnTimeDialog)
+        val input = android.widget.EditText(dialogContext).apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+            setText(value.toString()); selectAll()
         }
-    }
-}
-
-/** 数字:值行(大/中字居中)+ 操作行(◀ ▶ 均分) */
-@Composable
-private fun ValueStepper(value: String, big: Boolean = true, onPrev: () -> Unit, onNext: () -> Unit) {
-    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(
-            value,
-            style = if (big) OnTimeRowTime else OnTimeBodyLarge,
-            color = if (big) OnTimeColors.Gold else OnTimeColors.InkWhite,
-            modifier = Modifier.padding(vertical = OnTimeSpacing.xs),
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(OnTimeSpacing.md)) {
-            QuietButton(onClick = onPrev, text = "◀", modifier = Modifier.weight(1f))
-            QuietButton(onClick = onNext, text = "▶", modifier = Modifier.weight(1f))
+        val dialog = android.app.AlertDialog.Builder(dialogContext).setTitle("分钟数（${range.first}–${range.last}）")
+            .setView(input).setNegativeButton("取消", null).setPositiveButton("确定", null).create()
+        dialog.setOnShowListener {
+            dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val number = input.text.toString().toIntOrNull()
+                if (number == null || number !in range) input.error = "请输入 ${range.first}–${range.last}"
+                else { onPick(number); dialog.dismiss() }
+            }
         }
-    }
+        dialog.show()
+    }, text = "$value 分钟 · 修改", modifier = Modifier.fillMaxWidth(), emphasize = true)
 }
 
 /** 重复类型四选(统一 cell:minWidth+同高同 padding;选中金底) */
@@ -306,7 +277,7 @@ private fun RepeatSelector(current: ScheduleEngine.RepeatType, onPick: (Schedule
             val selected = current == t
             Box(Modifier.weight(1f).heightIn(min = 56.dp)
                 .background(if (selected) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.05f))
-                .clickable { onPick(t) }.padding(8.dp), contentAlignment = Alignment.Center) {
+                .clickable(interactionSource = null, indication = null) { onPick(t) }.padding(8.dp), contentAlignment = Alignment.Center) {
                 Text(label, style = OnTimeButtonLabel,
                     color = if (selected) OnTimeColors.DeepBlue else OnTimeColors.Gold)
             }
@@ -331,7 +302,7 @@ private fun WeekSelector(weekMask: Int, onToggle: (bit: Int, on: Boolean) -> Uni
                 color = if (on) OnTimeColors.DeepBlue else OnTimeColors.InkMuted,
                 modifier = Modifier
                     .background(if (on) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.05f))
-                    .clickable { onToggle(bit, !on) }
+                    .clickable(interactionSource = null, indication = null) { onToggle(bit, !on) }
                     .padding(horizontal = OnTimeSpacing.lg, vertical = OnTimeSpacing.md),
             )
         }
@@ -342,19 +313,20 @@ private fun WeekSelector(weekMask: Int, onToggle: (bit: Int, on: Boolean) -> Uni
 @Composable
 private fun OptionSelector(
     value: String,
-    onPrev: () -> Unit,
-    onNext: () -> Unit,
+    options: List<Pair<String, String>>,
+    currentId: String,
+    onPick: (String) -> Unit,
     onPreview: () -> Unit,
 ) {
+    val context = LocalContext.current
     Column(Modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth().background(OnTimeColors.InkWhite.copy(alpha = 0.05f)),
-            verticalAlignment = Alignment.CenterVertically) {
-            QuietButton(onClick = onPrev, text = "◀")
-            Text(value, style = OnTimeBodyLarge, color = OnTimeColors.Gold,
-                modifier = Modifier.weight(1f).padding(OnTimeSpacing.sm),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-            QuietButton(onClick = onNext, text = "▶")
-        }
+        QuietButton(onClick = {
+            android.app.AlertDialog.Builder(context, dev.evesis.ontime.R.style.OnTimeDialog)
+                .setTitle("选择声音")
+                .setSingleChoiceItems(options.map { it.second }.toTypedArray(), options.indexOfFirst { it.first == currentId }) { dialog, index ->
+                    PreviewPlayer.stop(); onPick(options[index].first); dialog.dismiss()
+                }.setNegativeButton("取消", null).show()
+        }, text = "$value  ·  更换", modifier = Modifier.fillMaxWidth(), emphasize = true)
         QuietButton(onClick = onPreview, text = "试听 / 停止", modifier = Modifier.fillMaxWidth())
     }
 }

@@ -46,7 +46,7 @@ data class OnTimeAdaptiveSpec(
                 gutter = when {
                     compact -> 20.dp
                     medium -> 24.dp
-                    else -> 48.dp
+                    else -> 32.dp
                 },
                 maxListWidth = 640.dp,
                 maxFormWidth = 560.dp,

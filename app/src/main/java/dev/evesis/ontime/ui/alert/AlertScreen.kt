@@ -1,22 +1,14 @@
 package dev.evesis.ontime.ui.alert
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.safeDrawingPadding
-import dev.evesis.ontime.ui.theme.LocalOnTimeAdaptive
-import androidx.compose.foundation.layout.Arrangement
+import dev.evesis.ontime.ui.components.WorkspaceColumns
+import dev.evesis.ontime.ui.components.WorkspacePanel
+import dev.evesis.ontime.ui.components.WorkspacePage
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import dev.evesis.ontime.ui.components.PixelSwipeToConfirm
 import dev.evesis.ontime.ui.components.QuietButton
@@ -24,14 +16,10 @@ import dev.evesis.ontime.ui.theme.OnTimeColors
 import dev.evesis.ontime.ui.theme.OnTimeBodyLarge
 import dev.evesis.ontime.ui.theme.OnTimeEyebrow
 import dev.evesis.ontime.ui.theme.OnTimeHeroTitle
-import dev.evesis.ontime.ui.theme.OnTimeLayout
 import dev.evesis.ontime.ui.theme.OnTimeSpacing
 import dev.evesis.ontime.ui.theme.OnTimeTheme
 
-/*
- * Alert v3 — 结构:角色席位(§36 产品差异化)· 母版:游戏 Dialog × Klokk 负空间
- * 「妲己 说」眉标(角色色)→ 提醒名 Hero → 台词(引号对话排版)→ 滑动 → 稍后。
- */
+/** 到点提醒：内容与行动分区；滑动确认和稍后契约保持。 */
 
 @Composable
 fun AlertScreen(
@@ -42,62 +30,21 @@ fun AlertScreen(
     onSlideAck: () -> Unit,
     onSnooze: () -> Unit,
 ) {
-    val spec = LocalOnTimeAdaptive.current
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(OnTimeColors.DeepBlue)
-            .safeDrawingPadding()
-            .padding(horizontal = spec.gutter),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            Modifier
-                .widthIn(max = OnTimeLayout.controlMaxWidth)
-                .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
-                .padding(vertical = OnTimeSpacing.xl),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            // 角色席位:眉标 + 角色色(声音是角色,画面给席位)
-            Text(
-                voiceLabel.uppercase(),
-                style = OnTimeEyebrow,
-                color = OnTimeColors.VoiceCyan,
-            )
-            Text(
-                title,
-                style = OnTimeHeroTitle,
-                color = OnTimeColors.Gold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(top = OnTimeSpacing.md),
-            )
-            // 台词:引号对话排版
-            Text(
-                "“$message”",
-                style = OnTimeBodyLarge,
-                color = OnTimeColors.InkWhite,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(
-                    top = OnTimeSpacing.lg,
-                    bottom = OnTimeSpacing.sectionGap,
-                ),
-            )
-            PixelSwipeToConfirm(
-                hint = "滑动确认",
-                onConfirm = onSlideAck,
-                modifier = Modifier.fillMaxWidth(),
-            )
-                QuietButton(
-                    onClick = onSnooze,
-                    text = snoozeLabel,
-                    emphasize = false,
-                    modifier = Modifier
-                        .padding(top = OnTimeSpacing.md)
-                        .align(Alignment.CenterHorizontally),
-                )
-        }
+    WorkspacePage("到时间了", "现在，留一点时间给这件事", actions = {}) {
+        WorkspaceColumns(Modifier.weight(1f), leadingWeight = 1.3f, leading = {
+            Column(Modifier.fillMaxWidth().padding(vertical = OnTimeSpacing.xxl)) {
+                Text(voiceLabel, style = OnTimeEyebrow, color = OnTimeColors.VoiceCyan)
+                Text(title, style = OnTimeHeroTitle, color = OnTimeColors.Gold,
+                    modifier = Modifier.padding(vertical = OnTimeSpacing.xl))
+                Text(message, style = OnTimeBodyLarge, color = OnTimeColors.InkWhite)
+            }
+        }, trailing = {
+            WorkspacePanel("准备好了吗", "滑动确认本次提醒，或稍后再提醒") {
+                PixelSwipeToConfirm(hint = "向右滑动 · 我知道了", onConfirm = onSlideAck,
+                    modifier = Modifier.fillMaxWidth())
+                QuietButton(onClick = onSnooze, text = snoozeLabel, modifier = Modifier.fillMaxWidth())
+            }
+        })
     }
 }
 

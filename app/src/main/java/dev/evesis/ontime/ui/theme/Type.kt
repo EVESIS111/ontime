@@ -75,8 +75,8 @@ val OnTimeSectionTitle = TextStyle(
 )
 /** 按钮文字 */
 val OnTimeButtonLabel = TextStyle(
-    fontFamily = OnTimePixelFont, fontWeight = FontWeight.Normal,
-    fontSize = 20.sp, lineHeight = 28.sp, letterSpacing = 3.sp,
+    fontFamily = FontFamily.Default, fontWeight = FontWeight.Medium,
+    fontSize = 20.sp, lineHeight = 28.sp, letterSpacing = 0.sp,
     lineHeightStyle = pixelLineHeightStyle,
 )
 
@@ -132,3 +132,9 @@ val OnTimeFormLabel = TextStyle(
     fontFamily = OnTimeSansFont, fontWeight = FontWeight.SemiBold,
     fontSize = 20.sp, lineHeight = 28.sp, letterSpacing = 0.3.sp,
 )
+
+/** Workspace headings and large schedule values; readable at tablet viewing distance. */
+val OnTimePageTitle = TextStyle(fontFamily = OnTimeSansFont, fontWeight = FontWeight.SemiBold,
+    fontSize = 32.sp, lineHeight = 42.sp)
+val OnTimeDisplayTime = TextStyle(fontFamily = OnTimeSansFont, fontWeight = FontWeight.Light,
+    fontSize = 72.sp, lineHeight = 84.sp, letterSpacing = (-2).sp)

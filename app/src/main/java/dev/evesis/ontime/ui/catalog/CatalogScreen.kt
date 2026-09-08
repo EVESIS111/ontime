@@ -1,5 +1,10 @@
 package dev.evesis.ontime.ui.catalog
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import dev.evesis.ontime.ui.components.WorkspacePage
+import androidx.compose.foundation.layout.widthIn
+import dev.evesis.ontime.ui.theme.OnTimeLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,17 +16,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.border
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import dev.evesis.ontime.ui.components.FocusPanel
@@ -34,7 +36,6 @@ import dev.evesis.ontime.ui.components.QuietButton
 import dev.evesis.ontime.ui.components.QuietSurface
 import dev.evesis.ontime.ui.components.SectionHeader
 import dev.evesis.ontime.ui.theme.OnTimeColors
-import dev.evesis.ontime.ui.theme.OnTimeScreenTitle
 import dev.evesis.ontime.ui.theme.OnTimeSpacing
 import dev.evesis.ontime.ui.theme.OnTimeTheme
 
@@ -46,17 +47,8 @@ fun CatalogScreen(onBack: () -> Unit) {
     var step by remember { mutableStateOf(9) }
     var text by remember { mutableStateOf("示例标题") }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(OnTimeColors.DeepBlue)
-            .verticalScroll(rememberScrollState())
-            .padding(top = OnTimeSpacing.xxl, bottom = OnTimeSpacing.gutter),
-        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-    ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = OnTimeSpacing.xl)) {
-            Text("组件目录", style = OnTimeScreenTitle, color = OnTimeColors.InkWhite)
-
+    WorkspacePage("组件目录", "全应用的视觉与交互基线", actions = { QuietButton(onClick = onBack, text = "返回") }) {
+        Column(Modifier.weight(1f).widthIn(max = OnTimeLayout.editorMaxWidth).fillMaxWidth().verticalScroll(rememberScrollState())) {
             Spacer(Modifier.padding(top = OnTimeSpacing.sectionGap))
             SectionHeader("BUTTON")
             PixelButton(onClick = {}, modifier = Modifier.fillMaxWidth()) {

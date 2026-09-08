@@ -96,5 +96,7 @@ internal fun EditorUiState.validationError(now: Long): String? = when {
     repeatType == ScheduleEngine.RepeatType.WEEKLY && weekMask == 0 -> "请至少选择一天"
     repeatType == ScheduleEngine.RepeatType.ONCE && atMillis <= now -> "请选择未来的提醒时间"
     repeatType == ScheduleEngine.RepeatType.INTERVAL && intervalMinutes <= 0 -> "提醒间隔必须大于零"
+    repeatType == ScheduleEngine.RepeatType.INTERVAL && windowStart >= 0 &&
+        (windowStart !in 0..1439 || windowEnd !in (windowStart + 1)..1439) -> "结束时间必须晚于开始时间"
     else -> null
 }

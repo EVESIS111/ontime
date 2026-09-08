@@ -31,4 +31,11 @@ class EditorValidationTest {
             repeatType = ScheduleEngine.RepeatType.INTERVAL, intervalMinutes = 0).validationError(now))
         assertNull(valid.copy(intervalMinutes = 0).validationError(now))
     }
+    @Test fun intervalWindowCannotSilentlyBecomeAllDay() {
+        val interval = valid.copy(repeatType = ScheduleEngine.RepeatType.INTERVAL, windowStart = 540)
+        assertEquals("结束时间必须晚于开始时间", interval.copy(windowEnd = 540).validationError(now))
+        assertEquals("结束时间必须晚于开始时间", interval.copy(windowEnd = 480).validationError(now))
+        assertNull(interval.copy(windowEnd = 1290).validationError(now))
+        assertNull(interval.copy(windowStart = -1, windowEnd = -1).validationError(now))
+    }
 }

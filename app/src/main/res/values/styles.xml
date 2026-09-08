@@ -1,8 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <style name="AppTheme" parent="@android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">#000000</item>
-        <item name="android:statusBarColor">#000000</item>
-        <item name="android:navigationBarColor">#000000</item>
+        <item name="android:windowBackground">#101923</item>
+        <item name="android:statusBarColor">#101923</item>
+        <item name="android:navigationBarColor">#101923</item>
+    </style>
+    <style name="OnTimeDialog" parent="@android:style/Theme.Material.Dialog.Alert">
+        <item name="android:colorAccent">#EAC77A</item>
+        <item name="android:windowBackground">#1A2735</item>
+        <item name="android:textColorPrimary">#EDE6D6</item>
+        <item name="android:textColorSecondary">#A8B3C2</item>
+        <item name="android:windowAnimationStyle">@null</item>
     </style>
 </resources>

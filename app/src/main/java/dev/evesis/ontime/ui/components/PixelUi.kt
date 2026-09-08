@@ -101,7 +101,7 @@ fun PixelButton(
     Box(
         modifier
             .heightIn(min = OnTimeSizing.buttonHeight)
-            .background(if (pressed && enabled) OnTimeColors.Gold else OnTimeColors.InkWhite.copy(alpha = 0.05f))
+            .background(if (pressed && enabled) OnTimeColors.InkWhite else if (enabled) OnTimeColors.Gold else OnTimeColors.DeepBlueHigh)
             .border(
                 OnTimeSizing.borderFocused,
                 when { !enabled -> OnTimeColors.GoldDim.copy(alpha = 0.4f); pressed -> OnTimeColors.InkWhite; else -> OnTimeColors.Gold },
@@ -123,7 +123,7 @@ fun PixelButton(
             horizontalArrangement = Arrangement.Center,
         ) {
             CompositionLocalProvider(LocalContentColor provides
-                if (pressed && enabled) OnTimeColors.DeepBlue else OnTimeColors.Gold) {
+                if (enabled) OnTimeColors.DeepBlue else OnTimeColors.InkMuted) {
                 content()
             }
         }
