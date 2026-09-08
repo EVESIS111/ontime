@@ -23,3 +23,7 @@
 
 ## 2026-09-08 全前端重构
 用户否定小改，授权替换四页结构与共享UI。采用Supporting Pane/Reply的响应式分区，保留现有Compose与业务state。参考板与本轮范围见V12_1_FRONTEND_SPEC.md；不增加依赖。系统时间/日期选择器替代低效逐次加减。
+
+## 2026-09-08 用户改定像素游戏机
+12.1的sans工作台视觉被用户否定，转为统一像素游戏机机身/屏幕/按键。具体执行规范见PIXEL_CONSOLE_SPEC.md，覆盖之前视觉结论；保留已验证的业务交互。共享consoleFrame仅绘制机身几何，不复制商业资产。
+时间选择模拟器回归发现原生TimePickerDialog最后手输字段未提交：改用标准TimePicker视图与AlertDialog，在确定时clearFocus再读取时间；调度算法不动。

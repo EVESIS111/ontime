@@ -35,3 +35,7 @@ Editor / 内容+调度 / Supporting Pane、官方Time pickers、现有Brutus / �
 Alert / 内容+行动 / adaptive-apps-samples、AOSP DeskClock、现有Brutus / 结构参考 / 保留slide-ack。
 Settings / 运行+关于 / Reply、Supporting Pane、现有设置页 / 结构参考 / 同一页面Shell。
 完整链接与许可见V12_1_FRONTEND_SPEC.md。
+
+### 像素游戏机覆盖
+整机外壳/按键边缘：Kenney Pixel UI索引（CC0结构参考，无源码/资产复制）＋Compose graphics modifiers官方绘制API；本地consoleFrame绘制阶梯边缘，沿用标准Compose布局和点击。
+Editor窗口：系统TimePicker / DatePicker / AlertDialog，统一像素字体和XML边框，时间确定前提交焦点。视觉方向以PIXEL_CONSOLE_SPEC为准。
